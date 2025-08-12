@@ -6,13 +6,13 @@ on:
   pull_request:
     branches: [ main, master ]
   schedule:
-    # Test schedule - every 5 minutes for testing
-    - cron: '*/5 * * * *'
+    # Runs at 10:30 AM IST (5:00 AM UTC) every day
+    - cron: '00 05 * * *'
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
-  test:
-    timeout-minutes: 60
+  setup:
+    name: "Setup and Install Dependencies"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -32,11 +32,87 @@ jobs:
       run: npx playwright install chromium --with-deps
     - name: Type check
       run: npm run typecheck
-    - name: Run Playwright tests
-      run: npm run test
+
+  project-1:
+    name: "Project 1 - Example Tests"
+    needs: setup
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    - name: Restore Playwright browsers cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+    - name: Run Project 1 Tests
+      run: npx playwright test --project=project-1-example
     - uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: playwright-report
+        name: project-1-playwright-report
+        path: playwright-report/
+        retention-days: 30
+
+  project-2:
+    name: "Project 2 - Example 2 Tests"
+    needs: setup
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    - name: Restore Playwright browsers cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+    - name: Run Project 2 Tests
+      run: npx playwright test --project=project-2-example-2
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: project-2-playwright-report
+        path: playwright-report/
+        retention-days: 30
+
+  project-3:
+    name: "Project 3 - Example 3 Tests"
+    needs: setup
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    - name: Restore Playwright browsers cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+    - name: Run Project 3 Tests
+      run: npx playwright test --project=project-3-example-3
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: project-3-playwright-report
         path: playwright-report/
         retention-days: 30
