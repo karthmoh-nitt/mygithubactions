@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: Playwright Tests - Sequential
 
 on:
   push:
@@ -6,9 +6,8 @@ on:
   pull_request:
     branches: [ main, master ]
   schedule:
-    # Runs at 10:30 AM IST (5:00 AM UTC) every day
     - cron: '00 05 * * *'
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch:
 
 jobs:
   setup:
@@ -40,11 +39,24 @@ jobs:
     - name: Type check
       run: npm run typecheck
 
-  project-1:
-    name: "Project 1 - Example Tests"
+  test:
+    name: "Test ${{ matrix.project-name }}"
     needs: setup
-    timeout-minutes: 30
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      max-parallel: 1  # This ensures sequential execution
+      matrix:
+        include:
+          - project-name: "Project 1 - Example"
+            project-id: "project-1-example"
+            artifact-name: "project-1-playwright-report"
+          - project-name: "Project 2 - Example 2" 
+            project-id: "project-2-example-2"
+            artifact-name: "project-2-playwright-report"
+          - project-name: "Project 3 - Example 3"
+            project-id: "project-3-example-3"
+            artifact-name: "project-3-playwright-report"
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
@@ -64,77 +76,11 @@ jobs:
         path: |
           ~/.cache/ms-playwright
         key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-    - name: Run Project 1 Tests
-      run: npx playwright test --project=project-1-example
+    - name: Run ${{ matrix.project-name }} Tests
+      run: npx playwright test --project=${{ matrix.project-id }}
     - uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: project-1-playwright-report
-        path: playwright-report/
-        retention-days: 30
-
-  project-2:
-    name: "Project 2 - Example 2 Tests"
-    needs: project-1
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-        cache: 'npm'
-    - name: Restore node_modules cache
-      uses: actions/cache@v4
-      with:
-        path: node_modules
-        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-modules-
-    - name: Restore Playwright browsers cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-    - name: Run Project 2 Tests
-      run: npx playwright test --project=project-2-example-2
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: project-2-playwright-report
-        path: playwright-report/
-        retention-days: 30
-
-  project-3:
-    name: "Project 3 - Example 3 Tests"
-    needs: project-2
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-        cache: 'npm'
-    - name: Restore node_modules cache
-      uses: actions/cache@v4
-      with:
-        path: node_modules
-        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-modules-
-    - name: Restore Playwright browsers cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-    - name: Run Project 3 Tests
-      run: npx playwright test --project=project-3-example-3
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: project-3-playwright-report
+        name: ${{ matrix.artifact-name }}
         path: playwright-report/
         retention-days: 30
