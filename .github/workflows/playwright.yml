@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
   schedule:
     # Runs at 10:45 PM IST (5:15 PM UTC) every day
-    - cron: '15 17 * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
