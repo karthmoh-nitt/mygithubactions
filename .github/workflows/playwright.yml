@@ -63,7 +63,7 @@ jobs:
 
   project-2:
     name: "Project 2 - Example 2 Tests"
-    needs: setup
+    needs: project-1
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
@@ -91,7 +91,7 @@ jobs:
 
   project-3:
     name: "Project 3 - Example 3 Tests"
-    needs: setup
+    needs: project-2
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
