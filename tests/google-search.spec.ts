@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test.describe.skip('Google Search Tests', () => {
   test('should be able to search for Playwright', async ({ page }) => {

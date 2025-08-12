@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# TypeScript
+dist/
+*.tsbuildinfo
+
 # Playwright
 /test-results/
 /playwright-report/
