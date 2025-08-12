@@ -1,0 +1,28 @@
+{
+  "name": "mygithubactions",
+  "version": "1.0.0",
+  "description": "This is to setup and test github actions to run Playwright tests",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/karthmoh-nitt/mygithubactions.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/karthmoh-nitt/mygithubactions/issues"
+  },
+  "homepage": "https://github.com/karthmoh-nitt/mygithubactions#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}
