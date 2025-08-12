@@ -5,6 +5,10 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  schedule:
+    # Runs at 10:15 PM IST (4:45 PM UTC) every day
+    - cron: '00 17 * * *'
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   test:
@@ -25,7 +29,7 @@ jobs:
           ~/.cache/ms-playwright
         key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
     - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
+      run: npx playwright install chromium --with-deps
     - name: Type check
       run: npm run typecheck
     - name: Run Playwright tests
