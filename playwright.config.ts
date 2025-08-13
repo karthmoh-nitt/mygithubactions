@@ -14,7 +14,10 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: [
+    ['list'],
+    ['allure-playwright']
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -30,16 +33,22 @@ export default defineConfig({
       name: 'project-1-example',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/example.spec.ts',
+      //testDir: './tests/project-1',
+      outputDir: './allure-results/project-1',
     },
     {
       name: 'project-2-example-2',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/example-2.spec.ts',
+      //testDir: './tests/project-2',
+      outputDir: './allure-results/project-2',
     },
     {
       name: 'project-3-example-3',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/example-3.spec.ts',
+      //testDir: './tests/project-3',
+      outputDir: './allure-results/project-3',
     },
 
     // {

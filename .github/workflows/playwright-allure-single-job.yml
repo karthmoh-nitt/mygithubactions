@@ -1,0 +1,411 @@
+name: Playwright Tests with Allure Reports (Single Job)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Runs at 10:30 AM IST (5:00 AM UTC) every day
+    - cron: '00 05 * * *'
+  workflow_dispatch:  # Allows manual triggering
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  test-and-report:
+    name: "Run All Tests and Generate Allure Reports"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Install Playwright Browsers
+      run: npx playwright install chromium --with-deps
+    
+    - name: Setup Java for Allure
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
+    - name: Type check
+      run: npm run typecheck
+    
+    - name: Create directory structure
+      run: |
+        mkdir -p allure-results/project-1
+        mkdir -p allure-results/project-2  
+        mkdir -p allure-results/project-3
+    
+    - name: Run Project 1 Tests
+      run: |
+        npx playwright test --project="project-1-example"
+        if [ -f allure-results/*.json ]; then
+          mv allure-results/*.json allure-results/project-1/ || true
+        fi
+      continue-on-error: true
+    
+    - name: Run Project 2 Tests
+      run: |
+        npx playwright test --project="project-2-example-2"
+        if [ -f allure-results/*.json ]; then
+          mv allure-results/*.json allure-results/project-2/ || true
+        fi
+      continue-on-error: true
+    
+    - name: Run Project 3 Tests
+      run: |
+        npx playwright test --project="project-3-example-3"
+        if [ -f allure-results/*.json ]; then
+          mv allure-results/*.json allure-results/project-3/ || true
+        fi
+      continue-on-error: true
+    
+    - name: List test results (debug)
+      run: |
+        echo "=== All Results ==="
+        find allure-results -name "*.json" -type f
+        echo "=== Project 1 ==="
+        ls -la allure-results/project-1/ || echo "No Project 1 results"
+        echo "=== Project 2 ==="
+        ls -la allure-results/project-2/ || echo "No Project 2 results"
+        echo "=== Project 3 ==="
+        ls -la allure-results/project-3/ || echo "No Project 3 results"
+    
+    - name: Generate Individual Allure Reports
+      run: |
+        # Generate individual project reports
+        if [ "$(find allure-results/project-1 -name '*.json' -type f)" ]; then
+          npx allure generate allure-results/project-1 --clean -o allure-report/project-1
+          echo "✅ Generated Project 1 report"
+        else
+          echo "⚠️ No results for Project 1"
+        fi
+        
+        if [ "$(find allure-results/project-2 -name '*.json' -type f)" ]; then
+          npx allure generate allure-results/project-2 --clean -o allure-report/project-2
+          echo "✅ Generated Project 2 report"
+        else
+          echo "⚠️ No results for Project 2"
+        fi
+        
+        if [ "$(find allure-results/project-3 -name '*.json' -type f)" ]; then
+          npx allure generate allure-results/project-3 --clean -o allure-report/project-3
+          echo "✅ Generated Project 3 report"
+        else
+          echo "⚠️ No results for Project 3"
+        fi
+    
+    - name: Generate Consolidated Allure Report
+      run: |
+        # Find all directories with JSON results
+        RESULTS_DIRS=""
+        if [ "$(find allure-results/project-1 -name '*.json' -type f)" ]; then
+          RESULTS_DIRS="$RESULTS_DIRS allure-results/project-1"
+        fi
+        if [ "$(find allure-results/project-2 -name '*.json' -type f)" ]; then
+          RESULTS_DIRS="$RESULTS_DIRS allure-results/project-2"
+        fi
+        if [ "$(find allure-results/project-3 -name '*.json' -type f)" ]; then
+          RESULTS_DIRS="$RESULTS_DIRS allure-results/project-3"
+        fi
+        
+        if [ -n "$RESULTS_DIRS" ]; then
+          echo "🔄 Generating consolidated report from: $RESULTS_DIRS"
+          npx allure generate $RESULTS_DIRS --clean -o allure-report/consolidated
+          echo "✅ Generated consolidated report"
+        else
+          echo "⚠️ No test results found for consolidated report"
+          mkdir -p allure-report/consolidated
+          cat > allure-report/consolidated/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head><title>No Test Results</title></head>
+        <body>
+          <h1>No Test Results Found</h1>
+          <p>All tests may have failed to produce results or were skipped.</p>
+        </body>
+        </html>
+        EOF
+        fi
+    
+    - name: Create Report Index Page
+      run: |
+        mkdir -p allure-report
+        cat > allure-report/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Playwright Allure Reports</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    padding: 20px;
+                }
+                .container { 
+                    max-width: 1000px; 
+                    margin: 0 auto; 
+                    background: white;
+                    border-radius: 15px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                }
+                .header {
+                    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                    color: white;
+                    padding: 40px;
+                    text-align: center;
+                }
+                .header h1 { 
+                    font-size: 2.5em; 
+                    margin-bottom: 10px;
+                    font-weight: 700;
+                }
+                .content { padding: 40px; }
+                .report-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 20px;
+                    margin-top: 30px;
+                }
+                .report-card { 
+                    border: none;
+                    padding: 30px;
+                    border-radius: 12px;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .report-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+                }
+                .report-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: var(--accent-color);
+                }
+                .consolidated { 
+                    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                    color: white;
+                    --accent-color: #fff;
+                }
+                .individual { 
+                    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                    color: white;
+                    --accent-color: #fff;
+                }
+                .report-card h2 { 
+                    font-size: 1.8em;
+                    margin-bottom: 15px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .report-card p { 
+                    margin-bottom: 20px;
+                    opacity: 0.9;
+                }
+                .report-links {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                    margin-top: 20px;
+                }
+                .report-link { 
+                    color: white;
+                    text-decoration: none;
+                    font-weight: 600;
+                    padding: 15px 25px;
+                    background: rgba(255,255,255,0.2);
+                    border-radius: 8px;
+                    transition: all 0.3s ease;
+                    text-align: center;
+                    backdrop-filter: blur(10px);
+                }
+                .report-link:hover { 
+                    background: rgba(255,255,255,0.3);
+                    transform: scale(1.05);
+                }
+                .timestamp { 
+                    color: #666;
+                    font-size: 0.9em;
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                }
+                .about {
+                    margin-top: 40px;
+                    padding: 30px;
+                    background: #f8f9fa;
+                    border-radius: 12px;
+                }
+                .about h3 {
+                    color: #2c3e50;
+                    margin-bottom: 20px;
+                    font-size: 1.4em;
+                }
+                .about ul {
+                    list-style: none;
+                }
+                .about li {
+                    padding: 8px 0;
+                    padding-left: 20px;
+                    position: relative;
+                }
+                .about li::before {
+                    content: "✓";
+                    color: #27ae60;
+                    font-weight: bold;
+                    position: absolute;
+                    left: 0;
+                }
+                @media (max-width: 768px) {
+                    .header h1 { font-size: 2em; }
+                    .content { padding: 20px; }
+                    .report-links { grid-template-columns: 1fr; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎭 Playwright Test Reports</h1>
+                    <p>Comprehensive test results with Allure reporting</p>
+                </div>
+                
+                <div class="content">
+                    <div class="timestamp">
+                        📅 Generated: $(date)
+                        <br>
+                        🔄 Workflow: GitHub Actions
+                    </div>
+                    
+                    <div class="report-grid">
+                        <div class="report-card consolidated">
+                            <h2>📊 Consolidated Report</h2>
+                            <p>Combined results from all test projects with cross-project analytics</p>
+                            <div class="report-links">
+                                <a href="consolidated/" class="report-link">View Consolidated Report →</a>
+                            </div>
+                        </div>
+                        
+                        <div class="report-card individual">
+                            <h2>🎯 Individual Project Reports</h2>
+                            <p>Detailed results for each specific project with dedicated analytics</p>
+                            <div class="report-links">
+                                <a href="project-1/" class="report-link">Project 1 Report</a>
+                                <a href="project-2/" class="report-link">Project 2 Report</a>
+                                <a href="project-3/" class="report-link">Project 3 Report</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="about">
+                        <h3>📋 Report Information</h3>
+                        <ul>
+                            <li><strong>Consolidated Report:</strong> Unified view of all project results with comparative analytics</li>
+                            <li><strong>Individual Reports:</strong> Project-specific detailed results and metrics</li>
+                            <li><strong>Test Coverage:</strong> Pass/fail status, execution time, and error details</li>
+                            <li><strong>Historical Trends:</strong> Test execution patterns and performance metrics</li>
+                            <li><strong>Environment Details:</strong> Browser, OS, and runtime information</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        EOF
+    
+    - name: Upload Playwright HTML Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-reports
+        path: playwright-report/
+        retention-days: 30
+    
+    - name: Upload Allure Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: allure-reports
+        path: allure-report/
+        retention-days: 30
+    
+    - name: Setup Pages
+      if: github.ref == 'refs/heads/main' && success()
+      uses: actions/configure-pages@v4
+    
+    - name: Upload to GitHub Pages
+      if: github.ref == 'refs/heads/main' && success()
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: allure-report/
+    
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main' && success()
+      id: deployment
+      uses: actions/deploy-pages@v4
+    
+    - name: Comment PR with report links
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Check if reports were generated
+          const consolidatedExists = fs.existsSync('allure-report/consolidated/index.html');
+          const project1Exists = fs.existsSync('allure-report/project-1/index.html');
+          const project2Exists = fs.existsSync('allure-report/project-2/index.html');
+          const project3Exists = fs.existsSync('allure-report/project-3/index.html');
+          
+          let comment = `## 🎭 Playwright Test Results\n\n`;
+          comment += `**Test execution completed!** Reports are available as artifacts:\n\n`;
+          
+          if (consolidatedExists) {
+            comment += `📊 **Consolidated Report**: Available in artifacts\n`;
+          }
+          
+          comment += `\n### Individual Project Reports:\n`;
+          comment += `${project1Exists ? '✅' : '❌'} Project 1\n`;
+          comment += `${project2Exists ? '✅' : '❌'} Project 2\n`;
+          comment += `${project3Exists ? '✅' : '❌'} Project 3\n`;
+          
+          comment += `\n📁 **Download Reports**: Check the "Artifacts" section of this workflow run\n`;
+          comment += `🔗 **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

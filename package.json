@@ -9,6 +9,15 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:report": "playwright show-report",
+    "test:project1": "playwright test --project='project-1-example' && mv allure-results/*.json allure-results/project-1/ 2>/dev/null || true",
+    "test:project2": "playwright test --project='project-2-example-2' && mv allure-results/*.json allure-results/project-2/ 2>/dev/null || true",
+    "test:project3": "playwright test --project='project-3-example-3' && mv allure-results/*.json allure-results/project-3/ 2>/dev/null || true",
+    "test:all-projects": "npm run test:project1 && npm run test:project2 && npm run test:project3",
+    "test:all-with-report": "npm run test:all-projects && npm run allure:consolidated",
+    "allure:project1": "npx allure generate allure-results/project-1 --clean -o allure-report/project-1 && npx allure open allure-report/project-1",
+    "allure:project2": "npx allure generate allure-results/project-2 --clean -o allure-report/project-2 && npx allure open allure-report/project-2",
+    "allure:project3": "npx allure generate allure-results/project-3 --clean -o allure-report/project-3 && npx allure open allure-report/project-3",
+    "allure:consolidated": "npx allure generate allure-results/project-1 allure-results/project-2 allure-results/project-3 --clean -o allure-report/consolidated && npx allure open allure-report/consolidated",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -26,6 +35,8 @@
   "devDependencies": {
     "@playwright/test": "^1.54.2",
     "@types/node": "^24.2.1",
+    "allure-commandline": "^2.34.1",
+    "allure-playwright": "^3.3.3",
     "typescript": "^5.9.2"
   }
 }
