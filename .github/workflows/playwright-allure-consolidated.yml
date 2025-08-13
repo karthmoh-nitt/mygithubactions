@@ -109,19 +109,21 @@ jobs:
     
     - name: Move Allure results to project directory
       run: |
+        TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+        mkdir -p allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP
         if ls allure-results/*.json 1> /dev/null 2>&1; then
-          mv allure-results/*.json allure-results/${{ matrix.folder-name }}/ || true
+          mv allure-results/*.json allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/ || true
         fi
         # Ensure .last-run.json exists
-        echo '{}' > allure-results/${{ matrix.folder-name }}/.last-run.json
+        echo '{}' > allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/.last-run.json
     
     - name: Upload ${{ matrix.project-name }} Allure Results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: allure-results-${{ matrix.folder-name }}
-        path: allure-results/${{ matrix.folder-name }}/
-        retention-days: 1  # Short retention for intermediate artifacts
+        name: allure-results-${{ matrix.folder-name }}-run-${{ github.run_id }}
+        path: allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/
+        retention-days: 30
     
     - name: Upload ${{ matrix.project-name }} Playwright Report
       uses: actions/upload-artifact@v4
