@@ -64,6 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
+      max-parallel: 1  # This ensures sequential execution
       fail-fast: false  # Continue running other projects even if one fails
       matrix:
         include:
@@ -196,6 +197,16 @@ jobs:
         ls -la allure-results/project-2/ || echo "No Project 2 results"
         echo "=== Project 3 Results ==="
         ls -la allure-results/project-3/ || echo "No Project 3 results"
+    
+    - name: Debug - List Allure Results Directories
+      run: |
+        echo "=== Debugging Allure Results Directories ==="
+        echo "=== Project 1 ==="
+        ls -la allure-results/project-1 || echo "No results found for Project 1"
+        echo "=== Project 2 ==="
+        ls -la allure-results/project-2 || echo "No results found for Project 2"
+        echo "=== Project 3 ==="
+        ls -la allure-results/project-3 || echo "No results found for Project 3"
     
     - name: Generate Individual Allure Reports
       run: |
