@@ -108,6 +108,16 @@ jobs:
       run: npx playwright test --project=${{ matrix.project-id }}
       continue-on-error: true  # Continue to report generation even if tests fail
     
+    - name: Debug - Before Moving Allure Results
+      run: |
+        echo "=== Debugging Before Moving Allure Results ==="
+        echo "=== Project 1 ==="
+        ls -la allure-results/project-1 || echo "No results found for Project 1"
+        echo "=== Project 2 ==="
+        ls -la allure-results/project-2 || echo "No results found for Project 2"
+        echo "=== Project 3 ==="
+        ls -la allure-results/project-3 || echo "No results found for Project 3"
+
     - name: Move Allure results to project directory
       run: |
         TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
@@ -117,6 +127,16 @@ jobs:
         fi
         # Ensure .last-run.json exists
         echo '{}' > allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/.last-run.json
+
+    - name: Debug - After Moving Allure Results
+      run: |
+        echo "=== Debugging After Moving Allure Results ==="
+        echo "=== Project 1 ==="
+        ls -la allure-results/project-1 || echo "No results found for Project 1"
+        echo "=== Project 2 ==="
+        ls -la allure-results/project-2 || echo "No results found for Project 2"
+        echo "=== Project 3 ==="
+        ls -la allure-results/project-3 || echo "No results found for Project 3"
     
     - name: Upload ${{ matrix.project-name }} Allure Results
       uses: actions/upload-artifact@v4
