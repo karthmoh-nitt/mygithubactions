@@ -271,20 +271,44 @@ jobs:
     
     - name: Generate Consolidated Allure Report
       run: |
+        echo "=== Generating Consolidated Report ==="
+        
+        # Check what directories exist
+        echo "Checking project directories:"
+        ls -la allure-results/project-1/ || echo "Project 1 directory not found"
+        ls -la allure-results/project-2/ || echo "Project 2 directory not found"
+        ls -la allure-results/project-3/ || echo "Project 3 directory not found"
+        
         # Combine all results for consolidated report
         RESULTS_DIRS=""
         if [ "$(ls -A allure-results/project-1/)" ]; then
+          echo "Adding project-1 to consolidated report"
           RESULTS_DIRS="$RESULTS_DIRS allure-results/project-1"
-        fi
-        if [ "$(ls -A allure-results/project-2/)" ]; then
-          RESULTS_DIRS="$RESULTS_DIRS allure-results/project-2"
-        fi
-        if [ "$(ls -A allure-results/project-3/)" ]; then
-          RESULTS_DIRS="$RESULTS_DIRS allure-results/project-3"
+        else
+          echo "Project-1 directory is empty or doesn't exist"
         fi
         
+        if [ "$(ls -A allure-results/project-2/)" ]; then
+          echo "Adding project-2 to consolidated report"
+          RESULTS_DIRS="$RESULTS_DIRS allure-results/project-2"
+        else
+          echo "Project-2 directory is empty or doesn't exist"
+        fi
+        
+        if [ "$(ls -A allure-results/project-3/)" ]; then
+          echo "Adding project-3 to consolidated report"
+          RESULTS_DIRS="$RESULTS_DIRS allure-results/project-3"
+        else
+          echo "Project-3 directory is empty or doesn't exist"
+        fi
+        
+        echo "Final RESULTS_DIRS: '$RESULTS_DIRS'"
+        
         if [ -n "$RESULTS_DIRS" ]; then
+          echo "Generating consolidated report with: $RESULTS_DIRS"
           npx allure generate $RESULTS_DIRS --clean -o allure-report/consolidated
+          echo "Consolidated report generation completed"
+          ls -la allure-report/consolidated/ || echo "Consolidated report directory not found"
         else
           echo "No test results found to generate consolidated report"
           mkdir -p allure-report/consolidated
