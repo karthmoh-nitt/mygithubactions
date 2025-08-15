@@ -157,6 +157,36 @@ jobs:
         path: playwright-report/
         retention-days: 30
 
+    - name: Upload ${{ matrix.project-name }} JUnit Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: junit-results-${{ matrix.folder-name }}
+        path: test-results/
+        retention-days: 30
+
+    - name: Generate Test Summary
+      if: always()
+      run: |
+        echo "## Test Results for ${{ matrix.project-name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "test-results/results.xml" ]; then
+          # Parse JUnit XML and extract summary
+          total_tests=$(xmllint --xpath "string(//testsuites/@tests)" test-results/results.xml 2>/dev/null || echo "0")
+          failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" test-results/results.xml 2>/dev/null || echo "0")
+          skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" test-results/results.xml 2>/dev/null || echo "0")
+          
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Tests | $total_tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | $failed_tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | $skipped_tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| Passed | $((total_tests - failed_tests - skipped_tests)) |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ No JUnit results found for ${{ matrix.project-name }}" >> $GITHUB_STEP_SUMMARY
+        fi
+
   generate-allure-report:
     name: "Generate Consolidated Allure Report"
     needs: test-projects
@@ -214,6 +244,33 @@ jobs:
         name: allure-results-project-3
         path: allure-results/project-3/
       continue-on-error: true
+    
+    - name: Download All JUnit Results
+      uses: actions/download-artifact@v4
+      with:
+        pattern: junit-results-*
+        path: junit-results/
+      continue-on-error: true
+    
+    - name: Consolidate JUnit Results
+      run: |
+        mkdir -p consolidated-junit
+        echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
+        echo '<testsuites>' >> consolidated-junit/consolidated-results.xml
+        
+        # Combine all JUnit XML files
+        for xml_file in junit-results/*/results.xml; do
+          if [ -f "$xml_file" ]; then
+            echo "Processing: $xml_file"
+            # Extract testsuite elements and append
+            sed -n '/<testsuite/,/<\/testsuite>/p' "$xml_file" | sed '1d;$d' >> consolidated-junit/consolidated-results.xml
+          fi
+        done
+        
+        echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
+        
+        echo "Consolidated JUnit results:"
+        cat consolidated-junit/consolidated-results.xml
     
     - name: Download Previous Allure History (for trends)
       uses: actions/download-artifact@v4
@@ -438,6 +495,14 @@ jobs:
       with:
         name: allure-history
         path: allure-history/
+        retention-days: 30
+    
+    - name: Upload Consolidated JUnit Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: junit-results-consolidated
+        path: consolidated-junit/
         retention-days: 30
     
     - name: Setup Pages
