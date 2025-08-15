@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
-      max-parallel: 1  # This ensures sequential execution
+      max-parallel: 1  # Ensure sequential execution
       fail-fast: false  # Continue running other projects even if one fails
       matrix:
         include:
@@ -107,16 +107,6 @@ jobs:
     - name: Run ${{ matrix.project-name }} Tests
       run: npx playwright test --project=${{ matrix.project-id }}
       continue-on-error: true  # Continue to report generation even if tests fail
-    
-    - name: Debug - Before Moving Allure Results
-      run: |
-        echo "=== Debugging Before Moving Allure Results ==="
-        echo "=== Project 1 ==="
-        ls -la allure-results/project-1 || echo "No results found for Project 1"
-        echo "=== Project 2 ==="
-        ls -la allure-results/project-2 || echo "No results found for Project 2"
-        echo "=== Project 3 ==="
-        ls -la allure-results/project-3 || echo "No results found for Project 3"
 
     - name: Move Allure results to project directory
       run: |
@@ -127,23 +117,13 @@ jobs:
         fi
         # Ensure .last-run.json exists
         echo '{}' > allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/.last-run.json
-
-    - name: Debug - After Moving Allure Results
-      run: |
-        echo "=== Debugging After Moving Allure Results ==="
-        echo "=== Project 1 ==="
-        ls -la allure-results/project-1 || echo "No results found for Project 1"
-        echo "=== Project 2 ==="
-        ls -la allure-results/project-2 || echo "No results found for Project 2"
-        echo "=== Project 3 ==="
-        ls -la allure-results/project-3 || echo "No results found for Project 3"
     
     - name: Upload ${{ matrix.project-name }} Allure Results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: allure-results-${{ matrix.folder-name }}-run-${{ github.run_id }}
-        path: allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/
+        name: allure-results-${{ matrix.folder-name }}
+        path: allure-results/${{ matrix.folder-name }}/
         retention-days: 30
     
     - name: Upload ${{ matrix.project-name }} Playwright Report
@@ -209,25 +189,6 @@ jobs:
         path: allure-results/project-3/
       continue-on-error: true
     
-    - name: List downloaded results (debug)
-      run: |
-        echo "=== Project 1 Results ==="
-        ls -la allure-results/project-1/ || echo "No Project 1 results"
-        echo "=== Project 2 Results ==="
-        ls -la allure-results/project-2/ || echo "No Project 2 results"
-        echo "=== Project 3 Results ==="
-        ls -la allure-results/project-3/ || echo "No Project 3 results"
-    
-    - name: Debug - List Allure Results Directories
-      run: |
-        echo "=== Debugging Allure Results Directories ==="
-        echo "=== Project 1 ==="
-        ls -la allure-results/project-1 || echo "No results found for Project 1"
-        echo "=== Project 2 ==="
-        ls -la allure-results/project-2 || echo "No results found for Project 2"
-        echo "=== Project 3 ==="
-        ls -la allure-results/project-3 || echo "No results found for Project 3"
-    
     - name: Generate Individual Allure Reports
       run: |
         # Generate individual project reports
@@ -283,12 +244,17 @@ jobs:
                 .consolidated { background-color: #f0f8ff; border-color: #0066cc; }
                 .individual { background-color: #f9f9f9; }
                 .timestamp { color: #666; font-size: 0.9em; }
+                .run-info { background-color: #f0f0f0; padding: 10px; border-radius: 4px; margin: 10px 0; }
             </style>
         </head>
         <body>
             <div class="container">
                 <h1>🎭 Playwright Test Reports</h1>
-                <p class="timestamp">Generated: $(date)</p>
+                <div class="run-info">
+                    <strong>Generated:</strong> $(date)<br>
+                    <strong>Workflow Run:</strong> ${{ github.run_number }}<br>
+                    <strong>Commit:</strong> ${{ github.sha }}
+                </div>
                 
                 <div class="report-card consolidated">
                     <h2>📊 Consolidated Report</h2>
@@ -309,6 +275,7 @@ jobs:
                         <li><strong>Consolidated Report:</strong> Shows combined results from all projects</li>
                         <li><strong>Individual Reports:</strong> Detailed results for each specific project</li>
                         <li><strong>Test Results:</strong> Include pass/fail status, execution time, and error details</li>
+                        <li><strong>Historical Data:</strong> Previous runs are preserved as artifacts for 30 days</li>
                     </ul>
                 </div>
             </div>
@@ -320,7 +287,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: allure-report-consolidated
+        name: allure-report-consolidated-run-${{ github.run_number }}
         path: allure-report/
         retention-days: 30
     
@@ -339,18 +306,4 @@ jobs:
       id: deployment
       uses: actions/deploy-pages@v4
 
-  cleanup:
-    name: "Cleanup Intermediate Artifacts"
-    needs: generate-allure-report
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-    - name: Delete intermediate artifacts
-      uses: geekyeggo/delete-artifact@v5
-      with:
-        name: |
-          allure-results-project-1
-          allure-results-project-2
-          allure-results-project-3
-        failOnError: false
+
