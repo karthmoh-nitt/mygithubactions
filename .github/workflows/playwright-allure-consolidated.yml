@@ -191,20 +191,6 @@ jobs:
         path: allure-results/project-3/
       continue-on-error: true
     
-    - name: Download Previous Allure Reports (for trends)
-      uses: actions/download-artifact@v4
-      with:
-        name: allure-report-consolidated-run-${{ github.run_number - 1 }}
-        path: allure-report/previous/
-      continue-on-error: true
-    
-    - name: Preserve Historical Results
-      run: |
-        if [ -d "allure-report/previous/consolidated" ]; then
-          echo "Preserving historical results for trends..."
-          cp -r allure-report/previous/consolidated/history allure-report/consolidated/ 2>/dev/null || true
-        fi
-    
     - name: Generate Individual Allure Reports
       run: |
         if [ "$(ls -A allure-results/project-1/)" ]; then
