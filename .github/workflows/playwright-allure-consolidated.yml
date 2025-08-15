@@ -155,39 +155,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-node-modules-
     
-    - name: Prepare Allure Results with Trend Metadata
-      run: |
-        # Create proper Allure results structure
-        mkdir -p allure-results/consolidated
-        
-        # Copy all project results to consolidated directory
-        if [ -d "allure-results/project-1" ]; then
-          cp -r allure-results/project-1/* allure-results/consolidated/ 2>/dev/null || true
-        fi
-        if [ -d "allure-results/project-2" ]; then
-          cp -r allure-results/project-2/* allure-results/consolidated/ 2>/dev/null || true
-        fi
-        if [ -d "allure-results/project-3" ]; then
-          cp -r allure-results/project-3/* allure-results/consolidated/ 2>/dev/null || true
-        fi
-        
-        # Create execution.json for trend tracking
-        cat > allure-results/consolidated/execution.json << 'EOF'
-        {
-          "name": "GitHub Actions Execution",
-          "type": "github",
-          "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-          "buildOrder": ${{ github.run_number }},
-          "reportName": "Playwright Allure Report",
-          "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/",
-          "buildName": "Workflow Run ${{ github.run_number }}",
-          "buildUrl": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        }
-        EOF
-        
-        echo "Consolidated results structure:"
-        ls -la allure-results/consolidated/
-    
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
@@ -230,6 +197,39 @@ jobs:
         name: allure-history
         path: allure-history/
       continue-on-error: true
+    
+    - name: Prepare Allure Results with Trend Metadata
+      run: |
+        # Create proper Allure results structure
+        mkdir -p allure-results/consolidated
+        
+        # Copy all project results to consolidated directory
+        if [ -d "allure-results/project-1" ]; then
+          cp -r allure-results/project-1/* allure-results/consolidated/ 2>/dev/null || true
+        fi
+        if [ -d "allure-results/project-2" ]; then
+          cp -r allure-results/project-2/* allure-results/consolidated/ 2>/dev/null || true
+        fi
+        if [ -d "allure-results/project-3" ]; then
+          cp -r allure-results/project-3/* allure-results/consolidated/ 2>/dev/null || true
+        fi
+        
+        # Create execution.json for trend tracking
+        cat > allure-results/consolidated/execution.json << 'EOF'
+        {
+          "name": "GitHub Actions Execution",
+          "type": "github",
+          "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+          "buildOrder": ${{ github.run_number }},
+          "reportName": "Playwright Allure Report",
+          "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/",
+          "buildName": "Workflow Run ${{ github.run_number }}",
+          "buildUrl": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        }
+        EOF
+        
+        echo "Consolidated results structure:"
+        ls -la allure-results/consolidated/
     
     - name: Generate Individual Allure Reports
       run: |
