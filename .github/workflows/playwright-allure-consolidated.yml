@@ -275,6 +275,8 @@ jobs:
             npx allure generate allure-results/consolidated --report-dir allure-report/consolidated
           else
             echo "No previous history found, creating new report..."
+            # Clean the directory first to avoid conflicts
+            rm -rf allure-report/consolidated/*
             npx allure generate allure-results/consolidated -o allure-report/consolidated
           fi
           
