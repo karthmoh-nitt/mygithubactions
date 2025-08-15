@@ -108,8 +108,32 @@ jobs:
       run: npm install allure-playwright allure-commandline
     
     - name: Run ${{ matrix.project-name }} Tests
-      run: npx playwright test --project=${{ matrix.project-id }}
-      continue-on-error: true
+      run: |
+        echo "=== RUNNING TESTS FOR ${{ matrix.project-name }} ==="
+        echo "Project ID: ${{ matrix.project-id }}"
+        echo "Project Folder: ${{ matrix.folder-name }}"
+        echo "Current directory: $(pwd)"
+        
+        # Check if allure-playwright is properly installed
+        echo "Checking allure-playwright installation:"
+        npm list allure-playwright || echo "allure-playwright not found in node_modules"
+        
+        # Check playwright config
+        echo "Checking playwright configuration:"
+        npx playwright show-config --project=${{ matrix.project-id }} | grep -A 10 -B 5 "reporter\|outputDir" || echo "Could not show config"
+        
+        # Run tests
+        echo "Running tests..."
+        npx playwright test --project=${{ matrix.project-id }}
+        
+        echo "Test execution completed"
+        echo "Checking for Allure results:"
+        find . -name "*.json" -path "*/allure-results/*" || echo "No Allure JSON files found"
+        echo "Allure results directory contents:"
+        ls -la allure-results/ || echo "No allure-results directory"
+        echo "Project-specific results:"
+        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No project results"
+      continue-on-error: true  # Continue to report generation even if tests fail
 
     - name: Move Allure Results to Project Directory
       run: |
@@ -203,16 +227,34 @@ jobs:
         # Create proper Allure results structure
         mkdir -p allure-results/consolidated
         
+        echo "=== DEBUGGING CONSOLIDATED RESULTS ==="
+        echo "Checking individual project directories:"
+        echo "Project 1 contents:"
+        ls -la allure-results/project-1/ || echo "Project 1 directory not found"
+        echo "Project 2 contents:"
+        ls -la allure-results/project-2/ || echo "Project 2 directory not found"
+        echo "Project 3 contents:"
+        ls -la allure-results/project-3/ || echo "Project 3 directory not found"
+        
         # Copy all project results to consolidated directory
         if [ -d "allure-results/project-1" ]; then
+          echo "Copying Project 1 results..."
           cp -r allure-results/project-1/* allure-results/consolidated/ 2>/dev/null || true
         fi
         if [ -d "allure-results/project-2" ]; then
+          echo "Copying Project 2 results..."
           cp -r allure-results/project-2/* allure-results/consolidated/ 2>/dev/null || true
         fi
         if [ -d "allure-results/project-3" ]; then
+          echo "Copying Project 3 results..."
           cp -r allure-results/project-3/* allure-results/consolidated/ 2>/dev/null || true
         fi
+        
+        echo "Consolidated results structure:"
+        ls -la allure-results/consolidated/
+        
+        echo "Looking for JSON files in consolidated:"
+        find allure-results/consolidated -name "*.json" -type f || echo "No JSON files found"
         
         # Create execution.json for trend tracking
         cat > allure-results/consolidated/execution.json << 'EOF'
@@ -228,7 +270,7 @@ jobs:
         }
         EOF
         
-        echo "Consolidated results structure:"
+        echo "Final consolidated results structure:"
         ls -la allure-results/consolidated/
     
     - name: Generate Individual Allure Reports
@@ -247,7 +289,15 @@ jobs:
     
     - name: Generate Consolidated Allure Report with Trends
       run: |
+        echo "=== GENERATING CONSOLIDATED REPORT ==="
+        echo "Checking if consolidated results exist:"
         if [ -d "allure-results/consolidated" ] && [ "$(ls -A allure-results/consolidated/)" ]; then
+          echo "Consolidated results found!"
+          echo "Contents of consolidated results:"
+          ls -la allure-results/consolidated/
+          echo "JSON files in consolidated:"
+          find allure-results/consolidated -name "*.json" -type f || echo "No JSON files found"
+          
           # Create allure.properties in the correct location
           mkdir -p allure-report/consolidated
           echo "allure.results.directory=allure-results/consolidated" > allure-report/consolidated/allure.properties
@@ -263,6 +313,9 @@ jobs:
           echo "allure.execution.start=2024-01-01T00:00:00Z" >> allure-report/consolidated/allure.properties
           echo "allure.execution.stop=2024-12-31T23:59:59Z" >> allure-report/consolidated/allure.properties
           
+          echo "Created allure.properties:"
+          cat allure-report/consolidated/allure.properties
+          
           # Check if we have previous history
           if [ -d "allure-history" ] && [ "$(ls -A allure-history/)" ]; then
             echo "Found previous history, copying for trends..."
@@ -272,13 +325,19 @@ jobs:
             echo "After copying history:"
             ls -la allure-report/consolidated/
             # Generate report with existing history
+            echo "Generating report with existing history..."
             npx allure generate allure-results/consolidated --report-dir allure-report/consolidated
           else
             echo "No previous history found, creating new report..."
             # Clean the directory first to avoid conflicts
             rm -rf allure-report/consolidated/*
+            echo "Generating new report..."
             npx allure generate allure-results/consolidated -o allure-report/consolidated
           fi
+          
+          echo "Report generation completed"
+          echo "Final report contents:"
+          ls -la allure-report/consolidated/
           
           # Save history for next run
           mkdir -p allure-history
@@ -294,8 +353,18 @@ jobs:
           echo "Final history contents:"
           ls -la allure-history/ || echo "No history directory"
         else
+          echo "No consolidated results found!"
+          echo "Checking individual project results:"
+          echo "Project 1:"
+          ls -la allure-results/project-1/ || echo "Project 1 not found"
+          echo "Project 2:"
+          ls -la allure-results/project-2/ || echo "Project 2 not found"
+          echo "Project 3:"
+          ls -la allure-results/project-3/ || echo "Project 3 not found"
+          
           mkdir -p allure-report/consolidated
           echo "<h1>No test results found</h1>" > allure-report/consolidated/index.html
+          echo "<p>No test results were generated or found in the consolidated directory.</p>" >> allure-report/consolidated/index.html
         fi
     
     - name: Create Report Index Page
