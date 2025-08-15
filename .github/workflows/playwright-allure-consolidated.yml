@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
-      max-parallel: 1  # Ensure sequential execution
+      # max-parallel: 1  # Ensure sequential execution (commented out for parallel execution)
       fail-fast: false  # Continue running other projects even if one fails
       matrix:
         include:
@@ -105,19 +105,23 @@ jobs:
       run: mkdir -p allure-results/${{ matrix.folder-name }}
     
     - name: Run ${{ matrix.project-name }} Tests
-      run: npx playwright test --project=${{ matrix.project-id }}
+      run: |
+        echo "Running tests for ${{ matrix.project-name }}"
+        npx playwright test --project=${{ matrix.project-id }}
+        echo "Test execution completed"
       continue-on-error: true  # Continue to report generation even if tests fail
 
-    - name: Move Allure results to project directory
+    - name: Debug - Check Allure Results
       run: |
-        TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-        mkdir -p allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP
-        if ls allure-results/*.json 1> /dev/null 2>&1; then
-          mv allure-results/*.json allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/ || true
-        fi
-        # Ensure .last-run.json exists
-        echo '{}' > allure-results/${{ matrix.folder-name }}/run-$TIMESTAMP/.last-run.json
-    
+        echo "=== Checking Allure Results ==="
+        echo "Current directory: $(pwd)"
+        echo "Allure results directory:"
+        ls -la allure-results/ || echo "No allure-results directory"
+        echo "Project-specific results:"
+        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No project results"
+        echo "Looking for JSON files:"
+        find allure-results -name "*.json" -type f || echo "No JSON files found"
+
     - name: Upload ${{ matrix.project-name }} Allure Results
       uses: actions/upload-artifact@v4
       if: always()
@@ -162,6 +166,9 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
     
+    - name: Install Allure Commandline
+      run: npm install -g allure-commandline
+    
     - name: Create allure-results directory structure
       run: |
         mkdir -p allure-results/project-1
@@ -188,6 +195,26 @@ jobs:
         name: allure-results-project-3
         path: allure-results/project-3/
       continue-on-error: true
+    
+    - name: Debug - Check Downloaded Results
+      run: |
+        echo "=== Checking Downloaded Results ==="
+        echo "Project 1:"
+        ls -la allure-results/project-1/ || echo "No Project 1 results"
+        echo "Project 2:"
+        ls -la allure-results/project-2/ || echo "No Project 2 results"
+        echo "Project 3:"
+        ls -la allure-results/project-3/ || echo "No Project 3 results"
+        
+        echo "=== Looking for JSON files ==="
+        find allure-results -name "*.json" -type f || echo "No JSON files found"
+        
+        echo "=== JSON file contents ==="
+        for file in $(find allure-results -name "*.json" -type f); do
+          echo "File: $file"
+          head -5 "$file"
+          echo "---"
+        done
     
     - name: Generate Individual Allure Reports
       run: |
