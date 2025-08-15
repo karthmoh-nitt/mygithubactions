@@ -219,20 +219,6 @@ jobs:
         fi
         
         if [ -n "$RESULTS_DIRS" ]; then
-          # Create allure.properties for trend tracking
-          cat > allure.properties << EOF
-          allure.results.directory=allure-results
-          allure.report.directory=allure-report/consolidated
-          allure.trends.enabled=true
-          allure.trends.history.size=10
-          allure.trends.history.days=30
-          allure.execution.environment=GitHub Actions
-          allure.execution.runner=Playwright
-          allure.execution.workflow=${{ github.workflow }}
-          allure.execution.run=${{ github.run_number }}
-          allure.execution.commit=${{ github.sha }}
-          EOF
-          
           npx allure generate $RESULTS_DIRS -o allure-report/consolidated
         else
           mkdir -p allure-report/consolidated
