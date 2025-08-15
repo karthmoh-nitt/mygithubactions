@@ -104,12 +104,50 @@ jobs:
     - name: Create Allure results directory
       run: mkdir -p allure-results/${{ matrix.folder-name }}
     
+    - name: Install Allure Dependencies
+      run: |
+        echo "Installing Allure dependencies..."
+        npm install allure-playwright allure-commandline
+        echo "Allure dependencies installed"
+    
+    - name: Verify Playwright Configuration
+      run: |
+        echo "=== Playwright Configuration ==="
+        echo "Checking if allure-playwright is installed:"
+        npm list allure-playwright || echo "allure-playwright not found"
+        echo "Checking playwright.config.ts:"
+        cat playwright.config.ts | grep -A 5 -B 5 "allure-playwright"
+    
     - name: Run ${{ matrix.project-name }} Tests
       run: |
         echo "Running tests for ${{ matrix.project-name }}"
+        echo "Current directory: $(pwd)"
+        echo "Allure results directory before tests:"
+        ls -la allure-results/ || echo "No allure-results directory"
+        
         npx playwright test --project=${{ matrix.project-id }}
+        
         echo "Test execution completed"
+        echo "Allure results directory after tests:"
+        ls -la allure-results/ || echo "No allure-results directory"
+        echo "Project-specific results after tests:"
+        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No project results"
       continue-on-error: true  # Continue to report generation even if tests fail
+
+    - name: Move Allure Results to Project Directory
+      run: |
+        echo "=== Moving Allure Results ==="
+        echo "Checking for JSON files in allure-results:"
+        find allure-results -name "*.json" -type f || echo "No JSON files found"
+        
+        # Move any JSON files from allure-results to the project directory
+        if ls allure-results/*.json 1> /dev/null 2>&1; then
+          echo "Moving JSON files to project directory..."
+          mv allure-results/*.json allure-results/${{ matrix.folder-name }}/ 2>/dev/null || true
+        fi
+        
+        echo "Final project directory contents:"
+        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No files in project directory"
 
     - name: Debug - Check Allure Results
       run: |
