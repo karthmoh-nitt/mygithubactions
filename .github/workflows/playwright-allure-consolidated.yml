@@ -105,60 +105,17 @@ jobs:
       run: mkdir -p allure-results/${{ matrix.folder-name }}
     
     - name: Install Allure Dependencies
-      run: |
-        echo "Installing Allure dependencies..."
-        npm install allure-playwright allure-commandline
-        echo "Allure dependencies installed"
-    
-    - name: Verify Playwright Configuration
-      run: |
-        echo "=== Playwright Configuration ==="
-        echo "Checking if allure-playwright is installed:"
-        npm list allure-playwright || echo "allure-playwright not found"
-        echo "Checking playwright.config.ts:"
-        cat playwright.config.ts | grep -A 5 -B 5 "allure-playwright"
+      run: npm install allure-playwright allure-commandline
     
     - name: Run ${{ matrix.project-name }} Tests
-      run: |
-        echo "Running tests for ${{ matrix.project-name }}"
-        echo "Current directory: $(pwd)"
-        echo "Allure results directory before tests:"
-        ls -la allure-results/ || echo "No allure-results directory"
-        
-        npx playwright test --project=${{ matrix.project-id }}
-        
-        echo "Test execution completed"
-        echo "Allure results directory after tests:"
-        ls -la allure-results/ || echo "No allure-results directory"
-        echo "Project-specific results after tests:"
-        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No project results"
-      continue-on-error: true  # Continue to report generation even if tests fail
+      run: npx playwright test --project=${{ matrix.project-id }}
+      continue-on-error: true
 
     - name: Move Allure Results to Project Directory
       run: |
-        echo "=== Moving Allure Results ==="
-        echo "Checking for JSON files in allure-results:"
-        find allure-results -name "*.json" -type f || echo "No JSON files found"
-        
-        # Move any JSON files from allure-results to the project directory
         if ls allure-results/*.json 1> /dev/null 2>&1; then
-          echo "Moving JSON files to project directory..."
           mv allure-results/*.json allure-results/${{ matrix.folder-name }}/ 2>/dev/null || true
         fi
-        
-        echo "Final project directory contents:"
-        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No files in project directory"
-
-    - name: Debug - Check Allure Results
-      run: |
-        echo "=== Checking Allure Results ==="
-        echo "Current directory: $(pwd)"
-        echo "Allure results directory:"
-        ls -la allure-results/ || echo "No allure-results directory"
-        echo "Project-specific results:"
-        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No project results"
-        echo "Looking for JSON files:"
-        find allure-results -name "*.json" -type f || echo "No JSON files found"
 
     - name: Upload ${{ matrix.project-name }} Allure Results
       uses: actions/upload-artifact@v4
@@ -234,29 +191,8 @@ jobs:
         path: allure-results/project-3/
       continue-on-error: true
     
-    - name: Debug - Check Downloaded Results
-      run: |
-        echo "=== Checking Downloaded Results ==="
-        echo "Project 1:"
-        ls -la allure-results/project-1/ || echo "No Project 1 results"
-        echo "Project 2:"
-        ls -la allure-results/project-2/ || echo "No Project 2 results"
-        echo "Project 3:"
-        ls -la allure-results/project-3/ || echo "No Project 3 results"
-        
-        echo "=== Looking for JSON files ==="
-        find allure-results -name "*.json" -type f || echo "No JSON files found"
-        
-        echo "=== JSON file contents ==="
-        for file in $(find allure-results -name "*.json" -type f); do
-          echo "File: $file"
-          head -5 "$file"
-          echo "---"
-        done
-    
     - name: Generate Individual Allure Reports
       run: |
-        # Generate individual project reports
         if [ "$(ls -A allure-results/project-1/)" ]; then
           npx allure generate allure-results/project-1 --clean -o allure-report/project-1
         fi
@@ -271,46 +207,20 @@ jobs:
     
     - name: Generate Consolidated Allure Report
       run: |
-        echo "=== Generating Consolidated Report ==="
-        
-        # Check what directories exist
-        echo "Checking project directories:"
-        ls -la allure-results/project-1/ || echo "Project 1 directory not found"
-        ls -la allure-results/project-2/ || echo "Project 2 directory not found"
-        ls -la allure-results/project-3/ || echo "Project 3 directory not found"
-        
-        # Combine all results for consolidated report
         RESULTS_DIRS=""
         if [ "$(ls -A allure-results/project-1/)" ]; then
-          echo "Adding project-1 to consolidated report"
           RESULTS_DIRS="$RESULTS_DIRS allure-results/project-1"
-        else
-          echo "Project-1 directory is empty or doesn't exist"
         fi
-        
         if [ "$(ls -A allure-results/project-2/)" ]; then
-          echo "Adding project-2 to consolidated report"
           RESULTS_DIRS="$RESULTS_DIRS allure-results/project-2"
-        else
-          echo "Project-2 directory is empty or doesn't exist"
         fi
-        
         if [ "$(ls -A allure-results/project-3/)" ]; then
-          echo "Adding project-3 to consolidated report"
           RESULTS_DIRS="$RESULTS_DIRS allure-results/project-3"
-        else
-          echo "Project-3 directory is empty or doesn't exist"
         fi
-        
-        echo "Final RESULTS_DIRS: '$RESULTS_DIRS'"
         
         if [ -n "$RESULTS_DIRS" ]; then
-          echo "Generating consolidated report with: $RESULTS_DIRS"
           npx allure generate $RESULTS_DIRS --clean -o allure-report/consolidated
-          echo "Consolidated report generation completed"
-          ls -la allure-report/consolidated/ || echo "Consolidated report directory not found"
         else
-          echo "No test results found to generate consolidated report"
           mkdir -p allure-report/consolidated
           echo "<h1>No test results found</h1>" > allure-report/consolidated/index.html
         fi
