@@ -191,6 +191,24 @@ jobs:
         path: allure-results/project-3/
       continue-on-error: true
     
+    - name: Download Previous Consolidated Report (for trends)
+      uses: actions/download-artifact@v4
+      with:
+        name: allure-report-consolidated-history
+        path: allure-report/previous/
+      continue-on-error: true
+    
+    - name: Prepare Historical Data for Trends
+      run: |
+        if [ -d "allure-report/previous/consolidated" ]; then
+          echo "Found previous report, preserving history for trends..."
+          mkdir -p allure-report/consolidated
+          cp -r allure-report/previous/consolidated/* allure-report/consolidated/ 2>/dev/null || true
+        else
+          echo "No previous report found, starting fresh..."
+          mkdir -p allure-report/consolidated
+        fi
+    
     - name: Generate Individual Allure Reports
       run: |
         if [ "$(ls -A allure-results/project-1/)" ]; then
@@ -219,7 +237,14 @@ jobs:
         fi
         
         if [ -n "$RESULTS_DIRS" ]; then
-          npx allure generate $RESULTS_DIRS -o allure-report/consolidated
+          # Use --report-dir to append to existing report for trends
+          if [ -d "allure-report/consolidated/history" ]; then
+            echo "Appending to existing report for trends..."
+            npx allure generate $RESULTS_DIRS --report-dir allure-report/consolidated
+          else
+            echo "Creating new consolidated report..."
+            npx allure generate $RESULTS_DIRS -o allure-report/consolidated
+          fi
         else
           mkdir -p allure-report/consolidated
           echo "<h1>No test results found</h1>" > allure-report/consolidated/index.html
@@ -286,7 +311,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: allure-report-consolidated-run-${{ github.run_number }}
+        name: allure-report-consolidated-history
         path: allure-report/
         retention-days: 30
     
