@@ -133,6 +133,15 @@ jobs:
         ls -la allure-results/ || echo "No allure-results directory"
         echo "Project-specific results:"
         ls -la allure-results/${{ matrix.folder-name }}/ || echo "No project results"
+        
+        echo "Checking for JUnit results:"
+        find . -name "*.xml" -path "*/test-results/*" || echo "No JUnit XML files found"
+        echo "Test results directory contents:"
+        ls -la test-results/ || echo "No test-results directory"
+        if [ -f "test-results/results.xml" ]; then
+          echo "JUnit XML file found:"
+          head -20 test-results/results.xml
+        fi
       continue-on-error: true  # Continue to report generation even if tests fail
 
     - name: Move Allure Results to Project Directory
@@ -164,6 +173,18 @@ jobs:
         name: junit-results-${{ matrix.folder-name }}
         path: test-results/
         retention-days: 30
+
+    - name: Debug JUnit Results
+      if: always()
+      run: |
+        echo "=== DEBUGGING JUNIT RESULTS ==="
+        echo "Current directory: $(pwd)"
+        echo "Test results directory exists:"
+        ls -la test-results/ || echo "No test-results directory"
+        echo "Looking for XML files:"
+        find . -name "*.xml" || echo "No XML files found"
+        echo "Looking for results.xml specifically:"
+        find . -name "results.xml" || echo "No results.xml found"
 
     - name: Generate Test Summary
       if: always()
@@ -519,5 +540,111 @@ jobs:
       if: github.ref == 'refs/heads/main'
       id: deployment
       uses: actions/deploy-pages@v4
+
+  email-notification:
+    name: "Send Email Notification"
+    needs: [generate-allure-report, deploy-pages]
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Download Consolidated Report
+      uses: actions/download-artifact@v4
+      with:
+        name: allure-report-consolidated
+        path: allure-report/
+    
+    - name: Download Consolidated JUnit Results
+      uses: actions/download-artifact@v4
+      with:
+        name: junit-results-consolidated
+        path: consolidated-junit/
+      continue-on-error: true
+    
+    - name: Generate Email Content
+      run: |
+        # Create email content
+        cat > email-content.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Playwright Test Report - Run ${{ github.run_number }}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; }
+                .summary { background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0; }
+                .success { color: #28a745; }
+                .failure { color: #dc3545; }
+                .warning { color: #ffc107; }
+                .button { background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
+                .footer { margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; font-size: 0.9em; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🎭 Playwright Test Report</h1>
+                <p><strong>Workflow Run:</strong> ${{ github.run_number }}</p>
+                <p><strong>Repository:</strong> ${{ github.repository }}</p>
+                <p><strong>Branch:</strong> ${{ github.ref_name }}</p>
+                <p><strong>Commit:</strong> ${{ github.sha }}</p>
+                <p><strong>Generated:</strong> $(date)</p>
+            </div>
+            
+            <div class="summary">
+                <h2>📊 Test Summary</h2>
+        EOF
+        
+        # Add test summary from JUnit results
+        if [ -f "consolidated-junit/consolidated-results.xml" ]; then
+          total_tests=$(xmllint --xpath "string(//testsuites/@tests)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
+          failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
+          skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
+          passed_tests=$((total_tests - failed_tests - skipped_tests))
+          
+          cat >> email-content.html << EOF
+                <p><strong>Total Tests:</strong> $total_tests</p>
+                <p><strong>Passed:</strong> <span class="success">$passed_tests</span></p>
+                <p><strong>Failed:</strong> <span class="failure">$failed_tests</span></p>
+                <p><strong>Skipped:</strong> <span class="warning">$skipped_tests</span></p>
+        EOF
+        else
+          cat >> email-content.html << 'EOF'
+                <p><strong>Status:</strong> <span class="warning">Test results not available</span></p>
+        EOF
+        fi
+        
+        cat >> email-content.html << 'EOF'
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <h2>🔗 Quick Links</h2>
+                <a href="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" class="button">View Allure Report</a>
+                <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" class="button">View Workflow Run</a>
+            </div>
+            
+            <div class="footer">
+                <p>This email was automatically generated by GitHub Actions.</p>
+                <p>To unsubscribe or modify email settings, please contact your administrator.</p>
+            </div>
+        </body>
+        </html>
+        EOF
+        
+        echo "Email content generated successfully"
+    
+    - name: Send Email via GitHub API (Alternative)
+      if: env.EMAIL_RECIPIENTS != ''
+      run: |
+        # This is a placeholder for GitHub API email sending
+        # You would need to implement this with your email service
+        echo "Email would be sent to: ${{ env.EMAIL_RECIPIENTS }}"
+        echo "Email content is ready in email-content.html"
+    
+    - name: Upload Email Content
+      uses: actions/upload-artifact@v4
+      with:
+        name: email-content
+        path: email-content.html
+        retention-days: 7
 
 
