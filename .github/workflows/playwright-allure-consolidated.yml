@@ -321,6 +321,20 @@ jobs:
         name: allure-history
         path: allure-history/
       continue-on-error: true
+      id: download-history
+
+    - name: Check History Download Status
+      run: |
+        echo "=== CHECKING ALLURE HISTORY DOWNLOAD ==="
+        if [ -d "allure-history" ] && [ "$(ls -A allure-history/)" ]; then
+          echo "✅ Previous allure history found and downloaded successfully"
+          echo "History contents:"
+          ls -la allure-history/
+        else
+          echo "ℹ️ No previous allure history found (this is normal for first run)"
+          echo "Creating empty history directory for first run"
+          mkdir -p allure-history
+        fi
     
     - name: Prepare Allure Results with Trend Metadata
       run: |
@@ -429,6 +443,7 @@ jobs:
             npx allure generate allure-results/consolidated --report-dir allure-report/consolidated
           else
             echo "No previous history found, creating new report..."
+            echo "This is normal for the first run or when no previous history exists"
             # Clean the directory first to avoid conflicts
             rm -rf allure-report/consolidated/*
             echo "Generating new report..."
