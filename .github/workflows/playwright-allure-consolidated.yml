@@ -543,7 +543,7 @@ jobs:
 
   email-notification:
     name: "Send Email Notification"
-    needs: [generate-allure-report, deploy-pages]
+    needs: [generate-allure-report]
     runs-on: ubuntu-latest
     if: always() && github.ref == 'refs/heads/main'
     
