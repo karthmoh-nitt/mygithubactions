@@ -118,13 +118,31 @@ jobs:
         echo "Checking allure-playwright installation:"
         npm list allure-playwright || echo "allure-playwright not found in node_modules"
         
+        # Check if test files exist
+        echo "Checking for test files:"
+        find . -name "*.spec.ts" || echo "No spec files found"
+        echo "Looking for specific test file:"
+        if [ "${{ matrix.project-id }}" = "project-1-example" ]; then
+          ls -la tests/example.spec.ts || echo "example.spec.ts not found"
+        elif [ "${{ matrix.project-id }}" = "project-2-example-2" ]; then
+          ls -la tests/example-2.spec.ts || echo "example-2.spec.ts not found"
+        elif [ "${{ matrix.project-id }}" = "project-3-example-3" ]; then
+          ls -la tests/example-3.spec.ts || echo "example-3.spec.ts not found"
+        fi
+        
         # Check playwright config
         echo "Checking playwright configuration:"
-        npx playwright show-config --project=${{ matrix.project-id }} | grep -A 10 -B 5 "reporter\|outputDir" || echo "Could not show config"
+        npx playwright show-config --project=${{ matrix.project-id }} | grep -A 10 -B 5 "reporter\|outputDir\|testMatch" || echo "Could not show config"
         
-        # Run tests
-        echo "Running tests..."
-        npx playwright test --project=${{ matrix.project-id }}
+        # Create test-results directory
+        mkdir -p test-results
+        
+        # Run tests with verbose output
+        echo "Running tests with verbose output..."
+        npx playwright test --project=${{ matrix.project-id }} || {
+          echo "Test execution failed or returned non-zero exit code"
+          echo "Exit code: $?"
+        }
         
         echo "Test execution completed"
         echo "Checking for Allure results:"
@@ -141,6 +159,10 @@ jobs:
         if [ -f "test-results/results.xml" ]; then
           echo "JUnit XML file found:"
           head -20 test-results/results.xml
+          echo "JUnit XML file size:"
+          wc -l test-results/results.xml
+        else
+          echo "❌ JUnit XML file NOT found!"
         fi
       continue-on-error: true  # Continue to report generation even if tests fail
 

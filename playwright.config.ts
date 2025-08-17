@@ -18,7 +18,7 @@ export default defineConfig({
     ['list'],
     ['allure-playwright'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['junit', { outputFile: 'test-results/results.xml' }],  // JUnit reporter for CI integration
+    ['junit', { outputFile: 'test-results/results.xml', attachments: true }],  // JUnit reporter for CI integration
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
