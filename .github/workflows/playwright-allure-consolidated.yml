@@ -134,17 +134,46 @@ jobs:
         echo "Checking playwright configuration:"
         npx playwright show-config --project=${{ matrix.project-id }} | grep -A 10 -B 5 "reporter\|outputDir\|testMatch" || echo "Could not show config"
         
+        # Verify JUnit reporter configuration
+        echo "=== VERIFYING JUNIT REPORTER CONFIG ==="
+        echo "Checking if JUnit reporter is configured:"
+        npx playwright show-config --project=${{ matrix.project-id }} | grep -i "junit" || echo "No JUnit reporter found in config"
+        
         # Create test-results directory
         mkdir -p test-results
         
         # Run tests with verbose output
         echo "Running tests with verbose output..."
-        npx playwright test --project=${{ matrix.project-id }} || {
-          echo "Test execution failed or returned non-zero exit code"
-          echo "Exit code: $?"
-        }
+        echo "Command: npx playwright test --project=${{ matrix.project-id }}"
         
-        echo "Test execution completed"
+        # Run tests and capture exit code
+        npx playwright test --project=${{ matrix.project-id }}
+        TEST_EXIT_CODE=$?
+        
+        echo "Test execution completed with exit code: $TEST_EXIT_CODE"
+        
+        # Check if tests actually ran
+        echo "Checking if tests were executed:"
+        if [ $TEST_EXIT_CODE -eq 0 ]; then
+          echo "✅ Tests completed successfully"
+        else
+          echo "❌ Tests failed or didn't run properly"
+        fi
+        
+        # Check if JUnit reporter generated output
+        echo "=== CHECKING JUNIT REPORTER OUTPUT ==="
+        echo "Looking for JUnit XML file immediately after test execution:"
+        if [ -f "test-results/results.xml" ]; then
+          echo "✅ JUnit XML file found after test execution"
+          echo "File size: $(wc -c < test-results/results.xml) bytes"
+          echo "First few lines:"
+          head -5 test-results/results.xml
+        else
+          echo "❌ JUnit XML file NOT found after test execution"
+          echo "This indicates the JUnit reporter is not working in CI"
+        fi
+        
+        echo "=== COMPREHENSIVE RESULTS CHECK ==="
         echo "Checking for Allure results:"
         find . -name "*.json" -path "*/allure-results/*" || echo "No Allure JSON files found"
         echo "Allure results directory contents:"
