@@ -64,7 +64,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
-      # max-parallel: 1  # Ensure sequential execution (commented out for parallel execution)
       fail-fast: false  # Continue running other projects even if one fails
       matrix:
         include:
@@ -108,92 +107,8 @@ jobs:
       run: npm install allure-playwright allure-commandline
     
     - name: Run ${{ matrix.project-name }} Tests
-      run: |
-        echo "=== RUNNING TESTS FOR ${{ matrix.project-name }} ==="
-        echo "Project ID: ${{ matrix.project-id }}"
-        echo "Project Folder: ${{ matrix.folder-name }}"
-        echo "Current directory: $(pwd)"
-        
-        # Check if allure-playwright is properly installed
-        echo "Checking allure-playwright installation:"
-        npm list allure-playwright || echo "allure-playwright not found in node_modules"
-        
-        # Check if test files exist
-        echo "Checking for test files:"
-        find . -name "*.spec.ts" || echo "No spec files found"
-        echo "Looking for specific test file:"
-        if [ "${{ matrix.project-id }}" = "project-1-example" ]; then
-          ls -la tests/example.spec.ts || echo "example.spec.ts not found"
-        elif [ "${{ matrix.project-id }}" = "project-2-example-2" ]; then
-          ls -la tests/example-2.spec.ts || echo "example-2.spec.ts not found"
-        elif [ "${{ matrix.project-id }}" = "project-3-example-3" ]; then
-          ls -la tests/example-3.spec.ts || echo "example-3.spec.ts not found"
-        fi
-        
-        # Check playwright config
-        echo "Checking playwright configuration:"
-        npx playwright show-config --project=${{ matrix.project-id }} | grep -A 10 -B 5 "reporter\|outputDir\|testMatch" || echo "Could not show config"
-        
-        # Verify JUnit reporter configuration
-        echo "=== VERIFYING JUNIT REPORTER CONFIG ==="
-        echo "Checking if JUnit reporter is configured:"
-        npx playwright show-config --project=${{ matrix.project-id }} | grep -i "junit" || echo "No JUnit reporter found in config"
-        
-        # Create test-results directory
-        mkdir -p test-results
-        
-        # Run tests with verbose output
-        echo "Running tests with verbose output..."
-        echo "Command: npx playwright test --project=${{ matrix.project-id }}"
-        
-        # Run tests and capture exit code
-        npx playwright test --project=${{ matrix.project-id }}
-        TEST_EXIT_CODE=$?
-        
-        echo "Test execution completed with exit code: $TEST_EXIT_CODE"
-        
-        # Check if tests actually ran
-        echo "Checking if tests were executed:"
-        if [ $TEST_EXIT_CODE -eq 0 ]; then
-          echo "✅ Tests completed successfully"
-        else
-          echo "❌ Tests failed or didn't run properly"
-        fi
-        
-        # Check if JUnit reporter generated output
-        echo "=== CHECKING JUNIT REPORTER OUTPUT ==="
-        echo "Looking for JUnit XML file immediately after test execution:"
-        if [ -f "test-results/results.xml" ]; then
-          echo "✅ JUnit XML file found after test execution"
-          echo "File size: $(wc -c < test-results/results.xml) bytes"
-          echo "First few lines:"
-          head -5 test-results/results.xml
-        else
-          echo "❌ JUnit XML file NOT found after test execution"
-          echo "This indicates the JUnit reporter is not working in CI"
-        fi
-        
-        echo "=== COMPREHENSIVE RESULTS CHECK ==="
-        echo "Checking for Allure results:"
-        find . -name "*.json" -path "*/allure-results/*" || echo "No Allure JSON files found"
-        echo "Allure results directory contents:"
-        ls -la allure-results/ || echo "No allure-results directory"
-        echo "Project-specific results:"
-        ls -la allure-results/${{ matrix.folder-name }}/ || echo "No project results"
-        
-        echo "Checking for JUnit results:"
-        find . -name "*.xml" -path "*/test-results/*" || echo "No JUnit XML files found"
-        echo "Test results directory contents:"
-        ls -la test-results/ || echo "No test-results directory"
-        if [ -f "test-results/results.xml" ]; then
-          echo "JUnit XML file found:"
-          head -20 test-results/results.xml
-          echo "JUnit XML file size:"
-          wc -l test-results/results.xml
-        else
-          echo "❌ JUnit XML file NOT found!"
-        fi
-      continue-on-error: true  # Continue to report generation even if tests fail
+      run: npx playwright test --project=${{ matrix.project-id }}
+      continue-on-error: true
 
     - name: Move Allure Results to Project Directory
       run: |
@@ -225,26 +140,11 @@ jobs:
         path: test-results/
         retention-days: 30
 
-    - name: Debug JUnit Results
-      if: always()
-      run: |
-        echo "=== DEBUGGING JUNIT RESULTS ==="
-        echo "Current directory: $(pwd)"
-        echo "Test results directory exists:"
-        ls -la test-results/ || echo "No test-results directory"
-        echo "Looking for XML files:"
-        find . -name "*.xml" || echo "No XML files found"
-        echo "Looking for results.xml specifically:"
-        find . -name "results.xml" || echo "No results.xml found"
-
-    # Removed individual test summary section to avoid showing incorrect "0" values
-    # The consolidated report contains the correct test data
-
   generate-allure-report:
     name: "Generate Consolidated Allure Report"
     needs: test-projects
     runs-on: ubuntu-latest
-    if: always()  # Run even if some tests failed
+    if: always()
     
     steps:
     - uses: actions/checkout@v4
@@ -314,23 +214,17 @@ jobs:
         # Combine all JUnit XML files
         for xml_file in junit-results/*/results.xml; do
           if [ -f "$xml_file" ]; then
-            echo "Processing: $xml_file"
-            # Extract testsuite elements and append
             sed -n '/<testsuite/,/<\/testsuite>/p' "$xml_file" | sed '1d;$d' >> consolidated-junit/consolidated-results.xml
           fi
         done
         
         echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
         
-        echo "Consolidated JUnit results:"
-        cat consolidated-junit/consolidated-results.xml
-        
         # Generate consolidated test summary for GitHub Actions UI
         echo "## 📊 Consolidated Test Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         if [ -f "consolidated-junit/consolidated-results.xml" ]; then
-          # Parse consolidated JUnit XML and extract summary
           total_tests=$(xmllint --xpath "string(//testsuites/@tests)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
           failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
           skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
@@ -347,13 +241,9 @@ jobs:
         else
           echo "❌ No consolidated test results found" >> $GITHUB_STEP_SUMMARY
         fi
-
+    
     - name: Setup Allure History Directory
-      run: |
-        echo "=== SETTING UP ALLURE HISTORY DIRECTORY ==="
-        mkdir -p allure-history/
-        echo "ℹ️ allure-history directory created"
-        echo "This is normal for the first run or when no previous history exists"
+      run: mkdir -p allure-history/
 
     - name: Download Previous Allure History (for trends)
       uses: actions/download-artifact@v4
@@ -361,57 +251,22 @@ jobs:
         name: allure-history
         path: allure-history/
       continue-on-error: true
-      id: download-history
-
-    - name: Check Downloaded History
-      run: |
-        echo "=== CHECKING DOWNLOADED HISTORY ==="
-        if [ -d "allure-history" ] && [ "$(ls -A allure-history/)" ]; then
-          echo "✅ Previous allure history found and downloaded successfully"
-          echo "History contents:"
-          ls -la allure-history/
-          echo "History file count:"
-          find allure-history/ -type f | wc -l
-        else
-          echo "ℹ️ No previous allure history found or directory is empty"
-          echo "This is normal for the first run or when no previous history exists"
-          echo "Creating empty history directory for this run"
-          mkdir -p allure-history
-        fi
 
     - name: Prepare Allure Results with Trend Metadata
       run: |
         # Create proper Allure results structure
         mkdir -p allure-results/consolidated
         
-        echo "=== DEBUGGING CONSOLIDATED RESULTS ==="
-        echo "Checking individual project directories:"
-        echo "Project 1 contents:"
-        ls -la allure-results/project-1/ || echo "Project 1 directory not found"
-        echo "Project 2 contents:"
-        ls -la allure-results/project-2/ || echo "Project 2 directory not found"
-        echo "Project 3 contents:"
-        ls -la allure-results/project-3/ || echo "Project 3 directory not found"
-        
         # Copy all project results to consolidated directory
         if [ -d "allure-results/project-1" ]; then
-          echo "Copying Project 1 results..."
           cp -r allure-results/project-1/* allure-results/consolidated/ 2>/dev/null || true
         fi
         if [ -d "allure-results/project-2" ]; then
-          echo "Copying Project 2 results..."
           cp -r allure-results/project-2/* allure-results/consolidated/ 2>/dev/null || true
         fi
         if [ -d "allure-results/project-3" ]; then
-          echo "Copying Project 3 results..."
           cp -r allure-results/project-3/* allure-results/consolidated/ 2>/dev/null || true
         fi
-        
-        echo "Consolidated results structure:"
-        ls -la allure-results/consolidated/
-        
-        echo "Looking for JSON files in consolidated:"
-        find allure-results/consolidated -name "*.json" -type f || echo "No JSON files found"
         
         # Create execution.json for trend tracking
         cat > allure-results/consolidated/execution.json << 'EOF'
@@ -426,9 +281,6 @@ jobs:
           "buildUrl": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         }
         EOF
-        
-        echo "Final consolidated results structure:"
-        ls -la allure-results/consolidated/
     
     - name: Generate Individual Allure Reports
       run: |
@@ -446,15 +298,7 @@ jobs:
     
     - name: Generate Consolidated Allure Report with Trends
       run: |
-        echo "=== GENERATING CONSOLIDATED REPORT ==="
-        echo "Checking if consolidated results exist:"
         if [ -d "allure-results/consolidated" ] && [ "$(ls -A allure-results/consolidated/)" ]; then
-          echo "Consolidated results found!"
-          echo "Contents of consolidated results:"
-          ls -la allure-results/consolidated/
-          echo "JSON files in consolidated:"
-          find allure-results/consolidated -name "*.json" -type f || echo "No JSON files found"
-          
           # Create allure.properties in the correct location
           mkdir -p allure-report/consolidated
           echo "allure.results.directory=allure-results/consolidated" > allure-report/consolidated/allure.properties
@@ -484,81 +328,24 @@ jobs:
           echo "allure.execution.start=2024-01-01T00:00:00Z" >> allure-results/consolidated/allure.properties
           echo "allure.execution.stop=2024-12-31T23:59:59Z" >> allure-results/consolidated/allure.properties
           
-          echo "Created allure.properties in both locations:"
-          echo "1. allure-report/consolidated/allure.properties:"
-          cat allure-report/consolidated/allure.properties
-          echo "2. allure-results/consolidated/allure.properties:"
-          cat allure-results/consolidated/allure.properties
-          
           # Check if we have previous history
           if [ -d "allure-history" ] && [ "$(ls -A allure-history/)" ]; then
-            echo "Found previous history, copying for trends..."
-            echo "History contents:"
-            ls -la allure-history/
             cp -r allure-history/* allure-report/consolidated/ 2>/dev/null || true
-            echo "After copying history:"
-            ls -la allure-report/consolidated/
-            # Generate report with existing history
-            echo "Generating report with existing history..."
             npx allure generate allure-results/consolidated --report-dir allure-report/consolidated
           else
-            echo "No previous history found, creating new report with history generation..."
-            echo "This is normal for the first run or when no previous history exists"
-            # Clean the directory first to avoid conflicts
             rm -rf allure-report/consolidated/*
-            echo "Generating new report with history data for future runs..."
-            # Use --report-dir to ensure history is generated even on first run
             npx allure generate allure-results/consolidated --report-dir allure-report/consolidated
-          fi
-          
-          echo "Report generation completed"
-          echo "Final report contents:"
-          ls -la allure-report/consolidated/
-          
-          # Debug: Check if history was generated
-          echo "=== CHECKING FOR GENERATED HISTORY ==="
-          if [ -d "allure-report/consolidated/history" ]; then
-            echo "✅ History directory found in consolidated report"
-            echo "History contents:"
-            ls -la allure-report/consolidated/history/
-            echo "History file count:"
-            find allure-report/consolidated/history/ -type f | wc -l
-          else
-            echo "❌ No history directory found in consolidated report"
-            echo "This means Allure didn't generate history data"
-          fi
-          
-          if [ -d "allure-report/consolidated/widgets" ]; then
-            echo "✅ Widgets directory found in consolidated report"
-            echo "Widgets contents:"
-            ls -la allure-report/consolidated/widgets/
-          else
-            echo "❌ No widgets directory found in consolidated report"
           fi
           
           # Save history for next run
           mkdir -p allure-history
           if [ -d "allure-report/consolidated/history" ]; then
-            echo "Copying history for next run..."
             cp -r allure-report/consolidated/history allure-history/ 2>/dev/null || true
           fi
           if [ -d "allure-report/consolidated/widgets" ]; then
-            echo "Copying widgets for next run..."
             cp -r allure-report/consolidated/widgets allure-history/ 2>/dev/null || true
           fi
-          
-          echo "Final history contents:"
-          ls -la allure-history/ || echo "No history directory"
         else
-          echo "No consolidated results found!"
-          echo "Checking individual project results:"
-          echo "Project 1:"
-          ls -la allure-results/project-1/ || echo "Project 1 not found"
-          echo "Project 2:"
-          ls -la allure-results/project-2/ || echo "Project 2 not found"
-          echo "Project 3:"
-          ls -la allure-results/project-3/ || echo "Project 3 not found"
-          
           mkdir -p allure-report/consolidated
           echo "<h1>No test results found</h1>" > allure-report/consolidated/index.html
           echo "<p>No test results were generated or found in the consolidated directory.</p>" >> allure-report/consolidated/index.html
@@ -636,25 +423,6 @@ jobs:
         name: allure-history
         path: allure-history/
         retention-days: 30
-
-    - name: Debug Allure History Upload
-      if: always()
-      run: |
-        echo "=== DEBUGGING ALLURE HISTORY UPLOAD ==="
-        echo "Checking what's in allure-history directory before upload:"
-        ls -la allure-history/ || echo "allure-history directory not found"
-        
-        if [ -d "allure-history" ]; then
-          echo "allure-history directory exists"
-          echo "Contents:"
-          find allure-history/ -type f | head -10 || echo "No files found"
-          echo "Directory size:"
-          du -sh allure-history/ || echo "Could not get directory size"
-        else
-          echo "❌ allure-history directory does not exist!"
-        fi
-        
-        echo "This explains why subsequent runs can't download the artifact"
     
     - name: Upload Consolidated JUnit Results
       uses: actions/upload-artifact@v4
@@ -767,16 +535,6 @@ jobs:
         </body>
         </html>
         EOF
-        
-        echo "Email content generated successfully"
-    
-    - name: Send Email via GitHub API (Alternative)
-      if: env.EMAIL_RECIPIENTS != ''
-      run: |
-        # This is a placeholder for GitHub API email sending
-        # You would need to implement this with your email service
-        echo "Email would be sent to: ${{ env.EMAIL_RECIPIENTS }}"
-        echo "Email content is ready in email-content.html"
     
     - name: Upload Email Content
       uses: actions/upload-artifact@v4
