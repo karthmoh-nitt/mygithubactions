@@ -348,6 +348,13 @@ jobs:
           echo "❌ No consolidated test results found" >> $GITHUB_STEP_SUMMARY
         fi
 
+    - name: Setup Allure History Directory
+      run: |
+        echo "=== SETTING UP ALLURE HISTORY DIRECTORY ==="
+        mkdir -p allure-history/
+        echo "ℹ️ allure-history directory created"
+        echo "This is normal for the first run or when no previous history exists"
+
     - name: Download Previous Allure History (for trends)
       uses: actions/download-artifact@v4
       with:
@@ -356,19 +363,22 @@ jobs:
       continue-on-error: true
       id: download-history
 
-    - name: Check History Download Status
+    - name: Check Downloaded History
       run: |
-        echo "=== CHECKING ALLURE HISTORY DOWNLOAD ==="
+        echo "=== CHECKING DOWNLOADED HISTORY ==="
         if [ -d "allure-history" ] && [ "$(ls -A allure-history/)" ]; then
           echo "✅ Previous allure history found and downloaded successfully"
           echo "History contents:"
           ls -la allure-history/
+          echo "History file count:"
+          find allure-history/ -type f | wc -l
         else
-          echo "ℹ️ No previous allure history found (this is normal for first run)"
-          echo "Creating empty history directory for first run"
+          echo "ℹ️ No previous allure history found or directory is empty"
+          echo "This is normal for the first run or when no previous history exists"
+          echo "Creating empty history directory for this run"
           mkdir -p allure-history
         fi
-    
+
     - name: Prepare Allure Results with Trend Metadata
       run: |
         # Create proper Allure results structure
@@ -487,6 +497,27 @@ jobs:
           echo "Final report contents:"
           ls -la allure-report/consolidated/
           
+          # Debug: Check if history was generated
+          echo "=== CHECKING FOR GENERATED HISTORY ==="
+          if [ -d "allure-report/consolidated/history" ]; then
+            echo "✅ History directory found in consolidated report"
+            echo "History contents:"
+            ls -la allure-report/consolidated/history/
+            echo "History file count:"
+            find allure-report/consolidated/history/ -type f | wc -l
+          else
+            echo "❌ No history directory found in consolidated report"
+            echo "This means Allure didn't generate history data"
+          fi
+          
+          if [ -d "allure-report/consolidated/widgets" ]; then
+            echo "✅ Widgets directory found in consolidated report"
+            echo "Widgets contents:"
+            ls -la allure-report/consolidated/widgets/
+          else
+            echo "❌ No widgets directory found in consolidated report"
+          fi
+          
           # Save history for next run
           mkdir -p allure-history
           if [ -d "allure-report/consolidated/history" ]; then
@@ -587,6 +618,25 @@ jobs:
         name: allure-history
         path: allure-history/
         retention-days: 30
+
+    - name: Debug Allure History Upload
+      if: always()
+      run: |
+        echo "=== DEBUGGING ALLURE HISTORY UPLOAD ==="
+        echo "Checking what's in allure-history directory before upload:"
+        ls -la allure-history/ || echo "allure-history directory not found"
+        
+        if [ -d "allure-history" ]; then
+          echo "allure-history directory exists"
+          echo "Contents:"
+          find allure-history/ -type f | head -10 || echo "No files found"
+          echo "Directory size:"
+          du -sh allure-history/ || echo "Could not get directory size"
+        else
+          echo "❌ allure-history directory does not exist!"
+        fi
+        
+        echo "This explains why subsequent runs can't download the artifact"
     
     - name: Upload Consolidated JUnit Results
       uses: actions/upload-artifact@v4
