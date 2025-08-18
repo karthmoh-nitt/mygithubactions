@@ -470,8 +470,25 @@ jobs:
           echo "allure.execution.start=2024-01-01T00:00:00Z" >> allure-report/consolidated/allure.properties
           echo "allure.execution.stop=2024-12-31T23:59:59Z" >> allure-report/consolidated/allure.properties
           
-          echo "Created allure.properties:"
+          # Also create allure.properties in the results directory for Allure to pick up
+          echo "allure.results.directory=allure-results/consolidated" > allure-results/consolidated/allure.properties
+          echo "allure.report.directory=allure-report/consolidated" >> allure-results/consolidated/allure.properties
+          echo "allure.trends.enabled=true" >> allure-results/consolidated/allure.properties
+          echo "allure.trends.history.size=10" >> allure-results/consolidated/allure.properties
+          echo "allure.trends.history.days=30" >> allure-results/consolidated/allure.properties
+          echo "allure.execution.environment=GitHub Actions" >> allure-results/consolidated/allure.properties
+          echo "allure.execution.runner=Playwright" >> allure-results/consolidated/allure.properties
+          echo "allure.execution.workflow=playwright-allure-consolidated" >> allure-results/consolidated/allure.properties
+          echo "allure.execution.run=${{ github.run_number }}" >> allure-results/consolidated/allure.properties
+          echo "allure.execution.commit=${{ github.sha }}" >> allure-results/consolidated/allure.properties
+          echo "allure.execution.start=2024-01-01T00:00:00Z" >> allure-results/consolidated/allure.properties
+          echo "allure.execution.stop=2024-12-31T23:59:59Z" >> allure-results/consolidated/allure.properties
+          
+          echo "Created allure.properties in both locations:"
+          echo "1. allure-report/consolidated/allure.properties:"
           cat allure-report/consolidated/allure.properties
+          echo "2. allure-results/consolidated/allure.properties:"
+          cat allure-results/consolidated/allure.properties
           
           # Check if we have previous history
           if [ -d "allure-history" ] && [ "$(ls -A allure-history/)" ]; then
@@ -485,12 +502,13 @@ jobs:
             echo "Generating report with existing history..."
             npx allure generate allure-results/consolidated --report-dir allure-report/consolidated
           else
-            echo "No previous history found, creating new report..."
+            echo "No previous history found, creating new report with history generation..."
             echo "This is normal for the first run or when no previous history exists"
             # Clean the directory first to avoid conflicts
             rm -rf allure-report/consolidated/*
-            echo "Generating new report..."
-            npx allure generate allure-results/consolidated -o allure-report/consolidated
+            echo "Generating new report with history data for future runs..."
+            # Use --report-dir to ensure history is generated even on first run
+            npx allure generate allure-results/consolidated --report-dir allure-report/consolidated
           fi
           
           echo "Report generation completed"

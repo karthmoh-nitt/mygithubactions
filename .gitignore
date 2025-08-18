@@ -43,3 +43,111 @@ allure-report/
 test-results/
 playwright-report/
 playwright/.cache/
+logs_43682741641/0_Setup and Install Dependencies.txt
+logs_43682741641/1_Test Project 2.txt
+logs_43682741641/2_Test Project 1.txt
+logs_43682741641/3_Test Project 3.txt
+logs_43682741641/4_Generate Consolidated Allure Report.txt
+logs_43682741641/5_Send Email Notification.txt
+logs_43682741641/Generate Consolidated Allure Report/1_Set up job.txt
+logs_43682741641/Generate Consolidated Allure Report/2_Run actions_checkout@v4.txt
+logs_43682741641/Generate Consolidated Allure Report/3_Run actions_setup-node@v4.txt
+logs_43682741641/Generate Consolidated Allure Report/4_Restore node_modules cache.txt
+logs_43682741641/Generate Consolidated Allure Report/5_Setup Java.txt
+logs_43682741641/Generate Consolidated Allure Report/6_Install Allure Commandline.txt
+logs_43682741641/Generate Consolidated Allure Report/7_Create allure-results directory structure.txt
+logs_43682741641/Generate Consolidated Allure Report/8_Download Project 1 Allure Results.txt
+logs_43682741641/Generate Consolidated Allure Report/9_Download Project 2 Allure Results.txt
+logs_43682741641/Generate Consolidated Allure Report/10_Download Project 3 Allure Results.txt
+logs_43682741641/Generate Consolidated Allure Report/11_Download All JUnit Results.txt
+logs_43682741641/Generate Consolidated Allure Report/12_Consolidate JUnit Results.txt
+logs_43682741641/Generate Consolidated Allure Report/13_Setup Allure History Directory.txt
+logs_43682741641/Generate Consolidated Allure Report/14_Download Previous Allure History (for trends).txt
+logs_43682741641/Generate Consolidated Allure Report/15_Check Downloaded History.txt
+logs_43682741641/Generate Consolidated Allure Report/16_Prepare Allure Results with Trend Metadata.txt
+logs_43682741641/Generate Consolidated Allure Report/17_Generate Individual Allure Reports.txt
+logs_43682741641/Generate Consolidated Allure Report/18_Generate Consolidated Allure Report with Trends.txt
+logs_43682741641/Generate Consolidated Allure Report/19_Create Report Index Page.txt
+logs_43682741641/Generate Consolidated Allure Report/20_Upload Consolidated Allure Report.txt
+logs_43682741641/Generate Consolidated Allure Report/21_Upload Allure History (for trends).txt
+logs_43682741641/Generate Consolidated Allure Report/22_Debug Allure History Upload.txt
+logs_43682741641/Generate Consolidated Allure Report/23_Upload Consolidated JUnit Results.txt
+logs_43682741641/Generate Consolidated Allure Report/24_Setup Pages.txt
+logs_43682741641/Generate Consolidated Allure Report/25_Upload to GitHub Pages.txt
+logs_43682741641/Generate Consolidated Allure Report/26_Deploy to GitHub Pages.txt
+logs_43682741641/Generate Consolidated Allure Report/49_Post Setup Java.txt
+logs_43682741641/Generate Consolidated Allure Report/50_Post Restore node_modules cache.txt
+logs_43682741641/Generate Consolidated Allure Report/51_Post Run actions_setup-node@v4.txt
+logs_43682741641/Generate Consolidated Allure Report/52_Post Run actions_checkout@v4.txt
+logs_43682741641/Generate Consolidated Allure Report/53_Complete job.txt
+logs_43682741641/Send Email Notification/1_Set up job.txt
+logs_43682741641/Send Email Notification/2_Download Consolidated Report.txt
+logs_43682741641/Send Email Notification/3_Download Consolidated JUnit Results.txt
+logs_43682741641/Send Email Notification/4_Generate Email Content.txt
+logs_43682741641/Send Email Notification/6_Upload Email Content.txt
+logs_43682741641/Send Email Notification/7_Complete job.txt
+logs_43682741641/Setup and Install Dependencies/1_Set up job.txt
+logs_43682741641/Setup and Install Dependencies/2_Run actions_checkout@v4.txt
+logs_43682741641/Setup and Install Dependencies/3_Run actions_setup-node@v4.txt
+logs_43682741641/Setup and Install Dependencies/4_Cache node_modules.txt
+logs_43682741641/Setup and Install Dependencies/6_Cache Playwright browsers.txt
+logs_43682741641/Setup and Install Dependencies/8_Type check.txt
+logs_43682741641/Setup and Install Dependencies/13_Post Cache Playwright browsers.txt
+logs_43682741641/Setup and Install Dependencies/14_Post Cache node_modules.txt
+logs_43682741641/Setup and Install Dependencies/15_Post Run actions_setup-node@v4.txt
+logs_43682741641/Setup and Install Dependencies/16_Post Run actions_checkout@v4.txt
+logs_43682741641/Setup and Install Dependencies/17_Complete job.txt
+logs_43682741641/Test Project 1/1_Set up job.txt
+logs_43682741641/Test Project 1/2_Run actions_checkout@v4.txt
+logs_43682741641/Test Project 1/3_Run actions_setup-node@v4.txt
+logs_43682741641/Test Project 1/4_Restore node_modules cache.txt
+logs_43682741641/Test Project 1/5_Restore Playwright browsers cache.txt
+logs_43682741641/Test Project 1/6_Create Allure results directory.txt
+logs_43682741641/Test Project 1/7_Install Allure Dependencies.txt
+logs_43682741641/Test Project 1/8_Run Project 1 Tests.txt
+logs_43682741641/Test Project 1/9_Move Allure Results to Project Directory.txt
+logs_43682741641/Test Project 1/10_Upload Project 1 Allure Results.txt
+logs_43682741641/Test Project 1/11_Upload Project 1 Playwright Report.txt
+logs_43682741641/Test Project 1/12_Upload Project 1 JUnit Results.txt
+logs_43682741641/Test Project 1/13_Debug JUnit Results.txt
+logs_43682741641/Test Project 1/23_Post Restore Playwright browsers cache.txt
+logs_43682741641/Test Project 1/24_Post Restore node_modules cache.txt
+logs_43682741641/Test Project 1/25_Post Run actions_setup-node@v4.txt
+logs_43682741641/Test Project 1/26_Post Run actions_checkout@v4.txt
+logs_43682741641/Test Project 1/27_Complete job.txt
+logs_43682741641/Test Project 2/1_Set up job.txt
+logs_43682741641/Test Project 2/2_Run actions_checkout@v4.txt
+logs_43682741641/Test Project 2/3_Run actions_setup-node@v4.txt
+logs_43682741641/Test Project 2/4_Restore node_modules cache.txt
+logs_43682741641/Test Project 2/5_Restore Playwright browsers cache.txt
+logs_43682741641/Test Project 2/6_Create Allure results directory.txt
+logs_43682741641/Test Project 2/7_Install Allure Dependencies.txt
+logs_43682741641/Test Project 2/8_Run Project 2 Tests.txt
+logs_43682741641/Test Project 2/9_Move Allure Results to Project Directory.txt
+logs_43682741641/Test Project 2/10_Upload Project 2 Allure Results.txt
+logs_43682741641/Test Project 2/11_Upload Project 2 Playwright Report.txt
+logs_43682741641/Test Project 2/12_Upload Project 2 JUnit Results.txt
+logs_43682741641/Test Project 2/13_Debug JUnit Results.txt
+logs_43682741641/Test Project 2/23_Post Restore Playwright browsers cache.txt
+logs_43682741641/Test Project 2/24_Post Restore node_modules cache.txt
+logs_43682741641/Test Project 2/25_Post Run actions_setup-node@v4.txt
+logs_43682741641/Test Project 2/26_Post Run actions_checkout@v4.txt
+logs_43682741641/Test Project 2/27_Complete job.txt
+logs_43682741641/Test Project 3/1_Set up job.txt
+logs_43682741641/Test Project 3/2_Run actions_checkout@v4.txt
+logs_43682741641/Test Project 3/3_Run actions_setup-node@v4.txt
+logs_43682741641/Test Project 3/4_Restore node_modules cache.txt
+logs_43682741641/Test Project 3/5_Restore Playwright browsers cache.txt
+logs_43682741641/Test Project 3/6_Create Allure results directory.txt
+logs_43682741641/Test Project 3/7_Install Allure Dependencies.txt
+logs_43682741641/Test Project 3/8_Run Project 3 Tests.txt
+logs_43682741641/Test Project 3/9_Move Allure Results to Project Directory.txt
+logs_43682741641/Test Project 3/10_Upload Project 3 Allure Results.txt
+logs_43682741641/Test Project 3/11_Upload Project 3 Playwright Report.txt
+logs_43682741641/Test Project 3/12_Upload Project 3 JUnit Results.txt
+logs_43682741641/Test Project 3/13_Debug JUnit Results.txt
+logs_43682741641/Test Project 3/23_Post Restore Playwright browsers cache.txt
+logs_43682741641/Test Project 3/24_Post Restore node_modules cache.txt
+logs_43682741641/Test Project 3/25_Post Run actions_setup-node@v4.txt
+logs_43682741641/Test Project 3/26_Post Run actions_checkout@v4.txt
+logs_43682741641/Test Project 3/27_Complete job.txt
