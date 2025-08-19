@@ -537,7 +537,7 @@ jobs:
         EOF
     
     - name: Send Email via SMTP
-      if: secrets.EMAIL_SMTP_HOST != ''
+      if: ${{ secrets.EMAIL_SMTP_HOST != '' }}
       run: |
         # Install required packages for email sending
         sudo apt-get update
