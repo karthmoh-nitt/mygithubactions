@@ -571,6 +571,21 @@ jobs:
         # Get current timestamp
         CURRENT_DATE=$(date '+%Y-%m-%d %H:%M:%S UTC')
         
+        # Debug: Check what we have in the consolidated-junit directory
+        echo "🔍 Checking consolidated-junit directory..."
+        ls -la consolidated-junit/ || echo "consolidated-junit directory not found"
+        
+        echo "🔍 Looking for consolidated-results.xml..."
+        if [ -f "consolidated-junit/consolidated-results.xml" ]; then
+          echo "✅ Found consolidated-results.xml"
+          echo "📄 File contents:"
+          cat consolidated-junit/consolidated-results.xml
+        else
+          echo "❌ consolidated-results.xml not found"
+          echo "📁 Directory contents:"
+          find consolidated-junit/ -type f || echo "No files found"
+        fi
+        
         # Create email content
         cat > email-content.html << EOF
         <!DOCTYPE html>
