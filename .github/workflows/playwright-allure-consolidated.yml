@@ -221,41 +221,37 @@ jobs:
         
         if [ $xml_count -eq 0 ]; then
           echo "❌ No JUnit XML files found. Creating dummy results for testing..."
-          cat > consolidated-junit/consolidated-results.xml << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <testsuites tests="6" failures="1" skipped="0" errors="0">
-            <testsuite name="Project 1" tests="2" failures="0" skipped="0" errors="0">
-              <testcase name="example test 1" classname="example.spec.ts" time="0.1"/>
-              <testcase name="example test 2" classname="example.spec.ts" time="0.1"/>
-            </testsuite>
-            <testsuite name="Project 2" tests="2" failures="1" skipped="0" errors="0">
-              <testcase name="example-2 test 1" classname="example-2.spec.ts" time="0.1"/>
-              <testcase name="example-2 test 2" classname="example-2.spec.ts" time="0.1">
-                <failure message="Test failed">Test failure details</failure>
-              </testcase>
-            </testsuite>
-            <testsuite name="Project 3" tests="2" failures="0" skipped="0" errors="0">
-              <testcase name="example-3 test 1" classname="example-3.spec.ts" time="0.1"/>
-              <testcase name="example-3 test 2" classname="example-3.spec.ts" time="0.1"/>
-            </testsuite>
-          </testsuites>
-          EOF
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
+          echo '<testsuites tests="6" failures="1" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '  <testsuite name="Project 1" tests="2" failures="0" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example test 1" classname="example.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example test 2" classname="example.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '  </testsuite>' >> consolidated-junit/consolidated-results.xml
+          echo '  <testsuite name="Project 2" tests="2" failures="1" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-2 test 1" classname="example-2.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-2 test 2" classname="example-2.spec.ts" time="0.1">' >> consolidated-junit/consolidated-results.xml
+          echo '      <failure message="Test failed">Test failure details</failure>' >> consolidated-junit/consolidated-results.xml
+          echo '    </testcase>' >> consolidated-junit/consolidated-results.xml
+          echo '  </testsuite>' >> consolidated-junit/consolidated-results.xml
+          echo '  <testsuite name="Project 3" tests="2" failures="0" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-3 test 1" classname="example-3.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-3 test 2" classname="example-3.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '  </testsuite>' >> consolidated-junit/consolidated-results.xml
+          echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
           total_tests=6
           total_failures=1
           total_skipped=0
           total_errors=0
         else
-          # Initialize consolidated XML with proper structure
-          cat > consolidated-junit/consolidated-results.xml << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <testsuites>
-          EOF
-          
           # Track totals manually
           total_tests=0
           total_failures=0
           total_skipped=0
           total_errors=0
+          
+          # Start the consolidated XML
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
+          echo '<testsuites>' >> consolidated-junit/consolidated-results.xml
           
           # Combine all JUnit XML files with proper parsing
           for xml_file in junit-results/*/results.xml; do
@@ -285,10 +281,8 @@ jobs:
           echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
           
           # Create a properly formatted consolidated XML with correct totals
-          cat > consolidated-junit/consolidated-results.xml << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <testsuites tests="$total_tests" failures="$total_failures" skipped="$total_skipped" errors="$total_errors">
-          EOF
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
+          echo "<testsuites tests=\"$total_tests\" failures=\"$total_failures\" skipped=\"$total_skipped\" errors=\"$total_errors\">" >> consolidated-junit/consolidated-results.xml
           
           # Re-add all testsuite content
           for xml_file in junit-results/*/results.xml; do
