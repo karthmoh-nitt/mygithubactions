@@ -258,11 +258,23 @@ jobs:
             if [ -f "$xml_file" ]; then
               echo "📄 Processing: $xml_file"
               
-              # Extract testsuite attributes
-              tests=$(xmllint --xpath "string(//testsuite/@tests)" "$xml_file" 2>/dev/null || echo "0")
-              failures=$(xmllint --xpath "string(//testsuite/@failures)" "$xml_file" 2>/dev/null || echo "0")
-              skipped=$(xmllint --xpath "string(//testsuite/@skipped)" "$xml_file" 2>/dev/null || echo "0")
-              errors=$(xmllint --xpath "string(//testsuite/@errors)" "$xml_file" 2>/dev/null || echo "0")
+              # Extract testsuite attributes with better error handling
+              echo "   Raw XML content:"
+              head -5 "$xml_file"
+              
+              # Try different XPath approaches
+              tests=$(xmllint --xpath "//testsuite/@tests" "$xml_file" 2>/dev/null | sed 's/tests="//;s/"//' || echo "0")
+              failures=$(xmllint --xpath "//testsuite/@failures" "$xml_file" 2>/dev/null | sed 's/failures="//;s/"//' || echo "0")
+              skipped=$(xmllint --xpath "//testsuite/@skipped" "$xml_file" 2>/dev/null | sed 's/skipped="//;s/"//' || echo "0")
+              errors=$(xmllint --xpath "//testsuite/@errors" "$xml_file" 2>/dev/null | sed 's/errors="//;s/"//' || echo "0")
+              
+              # If still 0, try alternative approach
+              if [ "$tests" = "0" ]; then
+                tests=$(grep -o 'tests="[0-9]*"' "$xml_file" | head -1 | sed 's/tests="//;s/"//' || echo "0")
+                failures=$(grep -o 'failures="[0-9]*"' "$xml_file" | head -1 | sed 's/failures="//;s/"//' || echo "0")
+                skipped=$(grep -o 'skipped="[0-9]*"' "$xml_file" | head -1 | sed 's/skipped="//;s/"//' || echo "0")
+                errors=$(grep -o 'errors="[0-9]*"' "$xml_file" | head -1 | sed 's/errors="//;s/"//' || echo "0")
+              fi
               
               echo "   Tests: $tests, Failures: $failures, Skipped: $skipped, Errors: $errors"
               
