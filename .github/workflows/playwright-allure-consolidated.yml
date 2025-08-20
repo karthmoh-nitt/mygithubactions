@@ -642,12 +642,26 @@ jobs:
         EOF
         
         # Add test summary from JUnit results
+        # Try different possible file locations
+        junit_file=""
         if [ -f "consolidated-junit/consolidated-results.xml" ]; then
+          junit_file="consolidated-junit/consolidated-results.xml"
+        elif [ -f "consolidated-junit/junit-results-consolidated/consolidated-results.xml" ]; then
+          junit_file="consolidated-junit/junit-results-consolidated/consolidated-results.xml"
+        elif [ -f "consolidated-results.xml" ]; then
+          junit_file="consolidated-results.xml"
+        fi
+        
+        if [ -n "$junit_file" ] && [ -f "$junit_file" ]; then
+          echo "✅ Found JUnit file at: $junit_file"
+          echo "📄 File contents:"
+          cat "$junit_file"
+          
           # Parse the consolidated XML with proper error handling
-          total_tests=$(xmllint --xpath "string(//testsuites/@tests)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
-          failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
-          skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
-          error_tests=$(xmllint --xpath "string(//testsuites/@errors)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
+          total_tests=$(xmllint --xpath "string(//testsuites/@tests)" "$junit_file" 2>/dev/null || echo "0")
+          failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" "$junit_file" 2>/dev/null || echo "0")
+          skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" "$junit_file" 2>/dev/null || echo "0")
+          error_tests=$(xmllint --xpath "string(//testsuites/@errors)" "$junit_file" 2>/dev/null || echo "0")
           
           # Calculate passed tests
           passed_tests=$((total_tests - failed_tests - skipped_tests - error_tests))
