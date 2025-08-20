@@ -208,10 +208,57 @@ jobs:
     - name: Consolidate JUnit Results
       run: |
         mkdir -p consolidated-junit
-        echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
-        echo '<testsuites>' >> consolidated-junit/consolidated-results.xml
         
-        # Combine all JUnit XML files
+        # Debug: Check what JUnit files we have
+        echo "🔍 Checking for JUnit XML files..."
+        find junit-results/ -name "*.xml" -type f || echo "No XML files found"
+        
+        # Initialize consolidated XML with proper structure
+        cat > consolidated-junit/consolidated-results.xml << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <testsuites>
+        EOF
+        
+        # Track totals manually
+        total_tests=0
+        total_failures=0
+        total_skipped=0
+        total_errors=0
+        
+        # Combine all JUnit XML files with proper parsing
+        for xml_file in junit-results/*/results.xml; do
+          if [ -f "$xml_file" ]; then
+            echo "📄 Processing: $xml_file"
+            
+            # Extract testsuite attributes
+            tests=$(xmllint --xpath "string(//testsuite/@tests)" "$xml_file" 2>/dev/null || echo "0")
+            failures=$(xmllint --xpath "string(//testsuite/@failures)" "$xml_file" 2>/dev/null || echo "0")
+            skipped=$(xmllint --xpath "string(//testsuite/@skipped)" "$xml_file" 2>/dev/null || echo "0")
+            errors=$(xmllint --xpath "string(//testsuite/@errors)" "$xml_file" 2>/dev/null || echo "0")
+            
+            echo "   Tests: $tests, Failures: $failures, Skipped: $skipped, Errors: $errors"
+            
+            # Add to totals
+            total_tests=$((total_tests + tests))
+            total_failures=$((total_failures + failures))
+            total_skipped=$((total_skipped + skipped))
+            total_errors=$((total_errors + errors))
+            
+            # Extract and append testsuite content
+            sed -n '/<testsuite/,/<\/testsuite>/p' "$xml_file" | sed '1d;$d' >> consolidated-junit/consolidated-results.xml
+          fi
+        done
+        
+        # Close the XML structure
+        echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
+        
+        # Create a properly formatted consolidated XML with correct totals
+        cat > consolidated-junit/consolidated-results.xml << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <testsuites tests="$total_tests" failures="$total_failures" skipped="$total_skipped" errors="$total_errors">
+        EOF
+        
+        # Re-add all testsuite content
         for xml_file in junit-results/*/results.xml; do
           if [ -f "$xml_file" ]; then
             sed -n '/<testsuite/,/<\/testsuite>/p' "$xml_file" | sed '1d;$d' >> consolidated-junit/consolidated-results.xml
@@ -220,24 +267,29 @@ jobs:
         
         echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
         
+        echo "📊 Consolidated totals: Tests=$total_tests, Failures=$total_failures, Skipped=$total_skipped, Errors=$total_errors"
+        
         # Generate consolidated test summary for GitHub Actions UI
         echo "## 📊 Consolidated Test Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         if [ -f "consolidated-junit/consolidated-results.xml" ]; then
-          total_tests=$(xmllint --xpath "string(//testsuites/@tests)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
-          failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
-          skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
-          passed_tests=$((total_tests - failed_tests - skipped_tests))
+          passed_tests=$((total_tests - total_failures - total_skipped - total_errors))
           
           echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Total Tests | $total_tests |" >> $GITHUB_STEP_SUMMARY
           echo "| Passed | $passed_tests |" >> $GITHUB_STEP_SUMMARY
-          echo "| Failed | $failed_tests |" >> $GITHUB_STEP_SUMMARY
-          echo "| Skipped | $skipped_tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | $total_failures |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | $total_skipped |" >> $GITHUB_STEP_SUMMARY
+          echo "| Errors | $total_errors |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**✅ All tests completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $total_failures -eq 0 ] && [ $total_errors -eq 0 ]; then
+            echo "**✅ All tests completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**⚠️ Some tests failed or had errors**" >> $GITHUB_STEP_SUMMARY
+          fi
         else
           echo "❌ No consolidated test results found" >> $GITHUB_STEP_SUMMARY
         fi
@@ -493,7 +545,7 @@ jobs:
                 <p><strong>Repository:</strong> ${{ github.repository }}</p>
                 <p><strong>Branch:</strong> ${{ github.ref_name }}</p>
                 <p><strong>Commit:</strong> ${{ github.sha }}</p>
-                <p><strong>Generated:</strong> $(date)</p>
+                <p><strong>Generated:</strong> $(date '+%Y-%m-%d %H:%M:%S UTC')</p>
             </div>
             
             <div class="summary">
@@ -502,16 +554,26 @@ jobs:
         
         # Add test summary from JUnit results
         if [ -f "consolidated-junit/consolidated-results.xml" ]; then
+          # Parse the consolidated XML with proper error handling
           total_tests=$(xmllint --xpath "string(//testsuites/@tests)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
           failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
           skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
-          passed_tests=$((total_tests - failed_tests - skipped_tests))
+          error_tests=$(xmllint --xpath "string(//testsuites/@errors)" consolidated-junit/consolidated-results.xml 2>/dev/null || echo "0")
+          
+          # Calculate passed tests
+          passed_tests=$((total_tests - failed_tests - skipped_tests - error_tests))
+          
+          # Ensure we don't show negative numbers
+          if [ $passed_tests -lt 0 ]; then
+            passed_tests=0
+          fi
           
           cat >> email-content.html << EOF
                 <p><strong>Total Tests:</strong> $total_tests</p>
                 <p><strong>Passed:</strong> <span class="success">$passed_tests</span></p>
                 <p><strong>Failed:</strong> <span class="failure">$failed_tests</span></p>
                 <p><strong>Skipped:</strong> <span class="warning">$skipped_tests</span></p>
+                <p><strong>Errors:</strong> <span class="failure">$error_tests</span></p>
         EOF
         else
           cat >> email-content.html << 'EOF'
