@@ -658,10 +658,25 @@ jobs:
           cat "$junit_file"
           
           # Parse the consolidated XML with proper error handling
-          total_tests=$(xmllint --xpath "string(//testsuites/@tests)" "$junit_file" 2>/dev/null || echo "0")
-          failed_tests=$(xmllint --xpath "string(//testsuites/@failures)" "$junit_file" 2>/dev/null || echo "0")
-          skipped_tests=$(xmllint --xpath "string(//testsuites/@skipped)" "$junit_file" 2>/dev/null || echo "0")
-          error_tests=$(xmllint --xpath "string(//testsuites/@errors)" "$junit_file" 2>/dev/null || echo "0")
+          echo "🔍 Parsing XML with xmllint..."
+          
+          # Try XPath first
+          total_tests=$(xmllint --xpath "//testsuites/@tests" "$junit_file" 2>/dev/null | sed 's/tests="//;s/"//' || echo "0")
+          failed_tests=$(xmllint --xpath "//testsuites/@failures" "$junit_file" 2>/dev/null | sed 's/failures="//;s/"//' || echo "0")
+          skipped_tests=$(xmllint --xpath "//testsuites/@skipped" "$junit_file" 2>/dev/null | sed 's/skipped="//;s/"//' || echo "0")
+          error_tests=$(xmllint --xpath "//testsuites/@errors" "$junit_file" 2>/dev/null | sed 's/errors="//;s/"//' || echo "0")
+          
+          echo "🔍 XPath results: tests='$total_tests', failures='$failed_tests', skipped='$skipped_tests', errors='$error_tests'"
+          
+          # If XPath failed, try grep fallback
+          if [ -z "$total_tests" ] || [ "$total_tests" = "0" ]; then
+            echo "🔍 Trying grep fallback..."
+            total_tests=$(grep -o 'tests="[0-9]*"' "$junit_file" | head -1 | sed 's/tests="//;s/"//' || echo "0")
+            failed_tests=$(grep -o 'failures="[0-9]*"' "$junit_file" | head -1 | sed 's/failures="//;s/"//' || echo "0")
+            skipped_tests=$(grep -o 'skipped="[0-9]*"' "$junit_file" | head -1 | sed 's/skipped="//;s/"//' || echo "0")
+            error_tests=$(grep -o 'errors="[0-9]*"' "$junit_file" | head -1 | sed 's/errors="//;s/"//' || echo "0")
+            echo "🔍 Grep results: tests='$total_tests', failures='$failed_tests', skipped='$skipped_tests', errors='$error_tests'"
+          fi
           
           # Calculate passed tests
           passed_tests=$((total_tests - failed_tests - skipped_tests - error_tests))
