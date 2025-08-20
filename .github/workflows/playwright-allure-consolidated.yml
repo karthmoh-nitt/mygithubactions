@@ -497,13 +497,29 @@ jobs:
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main'
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@v3
+      timeout-minutes: 10
+      continue-on-error: true
+    
+    - name: Check Deployment Status
+      if: github.ref == 'refs/heads/main' && steps.deployment.outcome == 'failure'
+      run: |
+        echo "⚠️ GitHub Pages deployment failed or timed out"
+        echo "📋 Manual deployment instructions:"
+        echo "1. Go to your repository Settings → Pages"
+        echo "2. Set Source to 'GitHub Actions'"
+        echo "3. The artifacts are available for manual deployment"
+        echo ""
+        echo "📁 Artifacts available:"
+        echo "- allure-report-consolidated: Contains all test reports"
+        echo "- You can download and deploy manually if needed"
 
   email-notification:
     name: "Send Email Notification"
     needs: [generate-allure-report]
     runs-on: ubuntu-latest
     if: always() && github.ref == 'refs/heads/main'
+    timeout-minutes: 5
     
     steps:
     - name: Download Consolidated Report
