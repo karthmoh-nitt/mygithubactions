@@ -1,0 +1,115 @@
+name: Direct Deploy HTML Reports
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Tests
+        run: npx playwright test
+
+      - name: Create Consolidated HTML Report
+        run: |
+          mkdir -p consolidated-html-report
+          cat > consolidated-html-report/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Playwright Test Reports</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  .container { max-width: 800px; margin: 0 auto; }
+                  .report-card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+                  .report-card h2 { color: #333; margin-top: 0; }
+                  .report-card a { color: #0066cc; text-decoration: none; font-weight: bold; }
+                  .report-card a:hover { text-decoration: underline; }
+                  .consolidated { background-color: #f0f8ff; border-color: #0066cc; }
+                  .individual { background-color: #f9f9f9; }
+                  .timestamp { color: #666; font-size: 0.9em; }
+                  .run-info { background-color: #f0f0f0; padding: 10px; border-radius: 4px; margin: 10px 0; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🎭 Playwright Test Reports</h1>
+                  <div class="run-info">
+                      <strong>Generated:</strong> $(date)<br>
+                      <strong>Workflow Run:</strong> ${{ github.run_number }}<br>
+                      <strong>Commit:</strong> ${{ github.sha }}
+                  </div>
+                  
+                  <div class="report-card consolidated">
+                      <h2>📊 Consolidated Results</h2>
+                      <p>Combined results from all test projects</p>
+                      <a href="consolidated/">View Consolidated Report →</a>
+                  </div>
+                  
+                  <div class="report-card individual">
+                      <h2>🎯 Individual Project Reports</h2>
+                      <p><a href="project-1/">Project 1 Report →</a></p>
+                      <p><a href="project-2/">Project 2 Report →</a></p>
+                      <p><a href="project-3/">Project 3 Report →</a></p>
+                  </div>
+                  
+                  <div style="margin-top: 40px; padding: 20px; background-color: #f5f5f5; border-radius: 8px;">
+                      <h3>📋 About These Reports</h3>
+                      <ul>
+                          <li><strong>Consolidated Report:</strong> Shows combined results from all projects</li>
+                          <li><strong>Individual Reports:</strong> Detailed results for each specific project</li>
+                          <li><strong>Test Results:</strong> Include pass/fail status, execution time, and error details</li>
+                          <li><strong>Screenshots:</strong> Visual evidence captured during test execution</li>
+                      </ul>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+          # Copy the Playwright report as consolidated
+          cp -r playwright-report/* consolidated-html-report/consolidated/ 2>/dev/null || mkdir -p consolidated-html-report/consolidated
+
+          echo "📁 Consolidated HTML report created"
+          ls -la consolidated-html-report/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Static Files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: consolidated-html-report/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3
+
+      - name: Show Deployment URL
+        run: |
+          echo "✅ GitHub Pages deployed successfully!"
+          echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
+          echo "📊 HTML Reports are now available at: https://karthmoh-nitt.github.io/mygithubactions/"
