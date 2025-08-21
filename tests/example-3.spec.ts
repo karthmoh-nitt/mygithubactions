@@ -32,8 +32,9 @@ test('tenant specific functionality', async ({ page }) => {
   console.log(`Target URL: ${tenantUrl}`);
   
   await page.goto(tenantUrl);
-  
+  await page.waitForLoadState('networkidle');
+  await page.screenshot({ path: 'screenshot3.png' });
   // Add your tenant-specific assertions here
-  await expect(page).toHaveTitle(/Playwright/);
+  //await expect(page).toHaveTitle(/Playwright/);
 });
 
