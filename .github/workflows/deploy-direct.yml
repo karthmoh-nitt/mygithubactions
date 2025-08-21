@@ -46,30 +46,27 @@ jobs:
       - name: Run Tests
         run: npx playwright test
 
-      - name: Generate Individual Project Reports
+      - name: Organize Individual Project Reports
         run: |
-          # Create individual project reports by running tests for each project separately
-          echo "🎯 Generating individual project reports..."
+          # Organize the consolidated results into individual project reports
+          echo "🎯 Organizing individual project reports..."
           
-          # Project 1
+          # Create project directories
           mkdir -p project-reports/project-1
-          npx playwright test tests/example.spec.ts
-          cp test-results/results.xml project-reports/project-1/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 1"
-          cp -r playwright-report/* project-reports/project-1/ 2>/dev/null || echo "⚠️ No HTML report for Project 1"
-          
-          # Project 2  
           mkdir -p project-reports/project-2
-          npx playwright test tests/example-2.spec.ts
-          cp test-results/results.xml project-reports/project-2/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 2"
-          cp -r playwright-report/* project-reports/project-2/ 2>/dev/null || echo "⚠️ No HTML report for Project 2"
-          
-          # Project 3
           mkdir -p project-reports/project-3
-          npx playwright test tests/example-3.spec.ts
-          cp test-results/results.xml project-reports/project-3/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 3"
+          
+          # Copy the main HTML report to each project (they'll all have the same content)
+          cp -r playwright-report/* project-reports/project-1/ 2>/dev/null || echo "⚠️ No HTML report for Project 1"
+          cp -r playwright-report/* project-reports/project-2/ 2>/dev/null || echo "⚠️ No HTML report for Project 2"
           cp -r playwright-report/* project-reports/project-3/ 2>/dev/null || echo "⚠️ No HTML report for Project 3"
           
-          echo "✅ Individual project reports generated"
+          # Copy JUnit results to each project
+          cp test-results/results.xml project-reports/project-1/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 1"
+          cp test-results/results.xml project-reports/project-2/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 2"
+          cp test-results/results.xml project-reports/project-3/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 3"
+          
+          echo "✅ Individual project reports organized"
 
       - name: Consolidate JUnit Results
         run: |
