@@ -8,14 +8,14 @@ test('has title', async ({ page }) => {
   // Expect a title "to contain" a substring.
   // await expect(page).toHaveTitle(/Playwright/);
   await page.waitForLoadState('networkidle');
-  await page.screenshot({ path: 'screenshot1.png' });
+  await page.screenshot({ path: `homepage-${config.environment}-${config.tenantId}.png` });
 });
 
 test('get started link', async ({ page }) => {
   // Use configuration for the base URL
   await page.goto(config.baseUrl);
   await page.waitForLoadState('networkidle');
-  await page.screenshot({ path: 'screenshot2.png' });
+  await page.screenshot({ path: `get-started-${config.environment}-${config.tenantId}.png` });
 
   // // Click the get started link.
   // await page.getByRole('link', { name: 'Get started' }).click();
@@ -33,7 +33,7 @@ test('tenant specific functionality', async ({ page }) => {
   
   await page.goto(tenantUrl);
   await page.waitForLoadState('networkidle');
-  await page.screenshot({ path: 'screenshot3.png' });
+  await page.screenshot({ path: `tenant-dashboard-${config.environment}-${config.tenantId}.png` });
   // Add your tenant-specific assertions here
   //await expect(page).toHaveTitle(/Playwright/);
 });
