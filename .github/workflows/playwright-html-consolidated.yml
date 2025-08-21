@@ -427,53 +427,8 @@ jobs:
         path: consolidated-junit/
         retention-days: 30
 
-  deploy-pages:
-    name: "Deploy to GitHub Pages"
-    needs: consolidate-reports
-    runs-on: ubuntu-latest
-    if: always()
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download Consolidated HTML Report
-      uses: actions/download-artifact@v4
-      with:
-        name: consolidated-html-report
-        path: consolidated-html-report/
-    
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: consolidated-html-report/
-        name: github-pages
-        retention-days: 1
-    
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v3
-      timeout-minutes: 10
-      continue-on-error: true
-    
-    - name: Check Deployment Status
-      if: failure()
-      run: |
-        echo "⚠️ GitHub Pages deployment failed or timed out"
-        echo "📋 Manual deployment instructions:"
-        echo "1. Go to your repository Settings → Pages"
-        echo "2. Set Source to 'GitHub Actions'"
-        echo "3. The artifacts are available for manual deployment"
-        echo ""
-        echo "📁 Artifacts available:"
-        echo "- consolidated-html-report: Contains all test reports"
-        echo "- You can download and deploy manually if needed"
+  # Note: GitHub Pages deployment is handled by a separate workflow (pages.yml)
+  # This ensures proper artifact handling and avoids run-id conflicts
 
   email-notification:
     name: "Send Email Notification"
