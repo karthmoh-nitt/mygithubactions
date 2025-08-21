@@ -370,9 +370,9 @@ jobs:
           # Set environment variables
           export EMAIL_SMTP_HOST="${{ secrets.EMAIL_SMTP_HOST }}"
           export EMAIL_SMTP_PORT="${{ secrets.EMAIL_SMTP_PORT }}"
-          export EMAIL_SMTP_USER="${{ secrets.EMAIL_SMTP_USER }}"
-          export EMAIL_SMTP_PASS="${{ secrets.EMAIL_SMTP_PASS }}"
-          export EMAIL_TO="${{ secrets.EMAIL_TO }}"
+          export EMAIL_SMTP_USER="${{ secrets.EMAIL_USERNAME }}"
+          export EMAIL_SMTP_PASS="${{ secrets.EMAIL_PASSWORD }}"
+          export EMAIL_TO="${{ secrets.EMAIL_RECIPIENTS }}"
           export GITHUB_RUN_NUMBER="${{ github.run_number }}"
           
           # Send email
