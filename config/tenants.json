@@ -1,0 +1,14 @@
+  {
+    "tenants": [
+      {
+        "name": "uat",
+        "baseURL": "https://karthik.applaud-test.com/"
+        
+      },
+      {
+        "name": "dev",
+        "baseURL": "https://karthik-com.applaudhcm.com/"
+        
+      }
+    ]
+  }

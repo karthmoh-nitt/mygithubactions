@@ -9,6 +9,25 @@ on:
     # Runs at 10:30 AM IST (5:00 AM UTC) every day
     - cron: '00 05 * * *'
   workflow_dispatch:  # Allows manual triggering
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      tenant_id:
+        description: 'Target tenant ID'
+        required: false
+        default: 'default'
+        type: string
+      base_url:
+        description: 'Custom base URL (overrides environment default)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -63,6 +82,12 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Environment variables - can be overridden by secrets, workflow inputs, or have defaults
+      BASE_URL: ${{ inputs.base_url || secrets.BASE_URL || 'https://example.com' }}
+      TENANT_ID: ${{ inputs.tenant_id || secrets.TENANT_ID || 'default' }}
+      ENVIRONMENT: ${{ inputs.environment || secrets.ENVIRONMENT || 'staging' }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://api.example.com' }}
     strategy:
       fail-fast: false  # Continue running other projects even if one fails
       matrix:
