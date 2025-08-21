@@ -53,15 +53,18 @@ jobs:
           
           # Project 1
           mkdir -p project-reports/project-1
-          npx playwright test tests/example.spec.ts --reporter=html --output-dir=project-reports/project-1 --reporter=junit --output-file=project-reports/project-1/results.xml
+          npx playwright test tests/example.spec.ts --reporter=junit --output-file=project-reports/project-1/results.xml
+          cp -r playwright-report/* project-reports/project-1/ 2>/dev/null || echo "⚠️ No HTML report for Project 1"
           
           # Project 2  
           mkdir -p project-reports/project-2
-          npx playwright test tests/example-2.spec.ts --reporter=html --output-dir=project-reports/project-2 --reporter=junit --output-file=project-reports/project-2/results.xml
+          npx playwright test tests/example-2.spec.ts --reporter=junit --output-file=project-reports/project-2/results.xml
+          cp -r playwright-report/* project-reports/project-2/ 2>/dev/null || echo "⚠️ No HTML report for Project 2"
           
           # Project 3
           mkdir -p project-reports/project-3
-          npx playwright test tests/example-3.spec.ts --reporter=html --output-dir=project-reports/project-3 --reporter=junit --output-file=project-reports/project-3/results.xml
+          npx playwright test tests/example-3.spec.ts --reporter=junit --output-file=project-reports/project-3/results.xml
+          cp -r playwright-report/* project-reports/project-3/ 2>/dev/null || echo "⚠️ No HTML report for Project 3"
           
           echo "✅ Individual project reports generated"
 
