@@ -135,6 +135,17 @@ jobs:
       run: npx playwright test --project=${{ matrix.project-id }}
       continue-on-error: true
 
+    - name: Debug - List Files After Tests
+      run: |
+        echo "📁 Current directory contents:"
+        ls -la
+        echo ""
+        echo "📁 Looking for PNG files:"
+        find . -name "*.png" -type f || echo "No PNG files found"
+        echo ""
+        echo "📁 test-results directory contents:"
+        ls -la test-results/ || echo "test-results directory not found"
+
     - name: Move Allure Results to Project Directory
       run: |
         if ls allure-results/*.json 1> /dev/null 2>&1; then
@@ -171,7 +182,7 @@ jobs:
       with:
         name: screenshots-${{ matrix.folder-name }}
         path: |
-          screenshot*.png
+          *.png
           test-results/screenshots/
         retention-days: 30
 
