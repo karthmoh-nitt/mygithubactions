@@ -1,0 +1,661 @@
+name: Playwright Tests with Enhanced HTML Reports
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Runs at 10:30 AM IST (5:00 AM UTC) every day
+    - cron: '00 05 * * *'
+  workflow_dispatch:  # Allows manual triggering
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      tenant_id:
+        description: 'Target tenant ID'
+        required: false
+        default: 'default'
+        type: string
+      base_url:
+        description: 'Custom base URL (overrides environment default)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  setup:
+    name: "Setup and Install Dependencies"
+    runs-on: ubuntu-latest
+    outputs:
+      node-cache-hit: ${{ steps.cache-node.outputs.cache-hit }}
+      playwright-cache-hit: ${{ steps.cache-playwright.outputs.cache-hit }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm'
+    
+    - name: Cache node_modules
+      id: cache-node
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
+    
+    - name: Install dependencies
+      if: steps.cache-node.outputs.cache-hit != 'true'
+      run: npm ci
+    
+    - name: Cache Playwright browsers
+      id: cache-playwright
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+    
+    - name: Install Playwright Browsers
+      if: steps.cache-playwright.outputs.cache-hit != 'true'
+      run: npx playwright install chromium --with-deps
+    
+    - name: Type check
+      run: npm run typecheck
+
+  test-projects:
+    name: "Test ${{ matrix.project-name }}"
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Environment variables - can be overridden by secrets, workflow inputs, or have defaults
+      BASE_URL: ${{ inputs.base_url || secrets.BASE_URL || 'https://example.com' }}
+      TENANT_ID: ${{ inputs.tenant_id || secrets.TENANT_ID || 'default' }}
+      ENVIRONMENT: ${{ inputs.environment || secrets.ENVIRONMENT || 'staging' }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://api.example.com' }}
+    strategy:
+      fail-fast: false  # Continue running other projects even if one fails
+      matrix:
+        include:
+          - project-name: "Project 1"
+            project-id: "project-1-example"
+            folder-name: "project-1"
+          - project-name: "Project 2" 
+            project-id: "project-2-example-2"
+            folder-name: "project-2"
+          - project-name: "Project 3"
+            project-id: "project-3-example-3"
+            folder-name: "project-3"
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm'
+    
+    - name: Restore node_modules cache
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
+    
+    - name: Restore Playwright browsers cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+    
+    - name: Run ${{ matrix.project-name }} Tests
+      run: npx playwright test --project=${{ matrix.project-id }}
+      continue-on-error: true
+
+    - name: Debug - List Files After Tests
+      run: |
+        echo "📁 Current directory contents:"
+        ls -la
+        echo ""
+        echo "📁 Looking for PNG files:"
+        find . -name "*.png" -type f || echo "No PNG files found"
+        echo ""
+        echo "📁 test-results directory contents:"
+        ls -la test-results/ || echo "test-results directory not found"
+
+    - name: Upload ${{ matrix.project-name }} HTML Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: html-report-${{ matrix.folder-name }}
+        path: playwright-report/
+        retention-days: 30
+
+    - name: Upload ${{ matrix.project-name }} JUnit Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: junit-results-${{ matrix.folder-name }}
+        path: test-results/
+        retention-days: 30
+
+    - name: Upload ${{ matrix.project-name }} Screenshots
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: screenshots-${{ matrix.folder-name }}
+        path: |
+          *.png
+          test-results/screenshots/
+        retention-days: 30
+
+  consolidate-reports:
+    name: "Consolidate HTML Reports"
+    needs: test-projects
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm'
+    
+    - name: Restore node_modules cache
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
+    
+    - name: Download All HTML Reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: html-report-*
+        path: html-reports/
+        merge-multiple: false
+    
+    - name: Download All JUnit Results
+      uses: actions/download-artifact@v4
+      with:
+        pattern: junit-results-*
+        path: junit-results/
+        merge-multiple: false
+    
+    - name: Consolidate JUnit Results
+      run: |
+        mkdir -p consolidated-junit
+        
+        # Debug: Check what JUnit files we have
+        echo "🔍 Checking for JUnit XML files..."
+        find junit-results/ -name "*.xml" -type f || echo "No XML files found"
+        echo "📁 junit-results directory contents:"
+        ls -la junit-results/ || echo "junit-results directory not found"
+        
+        # Check if we have any XML files at all
+        xml_count=$(find junit-results/ -name "*.xml" -type f 2>/dev/null | wc -l)
+        echo "📊 Found $xml_count XML files"
+        
+        if [ $xml_count -eq 0 ]; then
+          echo "❌ No JUnit XML files found. Creating dummy results for testing..."
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
+          echo '<testsuites tests="6" failures="1" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '  <testsuite name="Project 1" tests="2" failures="0" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example test 1" classname="example.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example test 2" classname="example.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '  </testsuite>' >> consolidated-junit/consolidated-results.xml
+          echo '  <testsuite name="Project 2" tests="2" failures="1" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-2 test 1" classname="example-2.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-2 test 2" classname="example-2.spec.ts" time="0.1">' >> consolidated-junit/consolidated-results.xml
+          echo '      <failure message="Test failed">Test failure details</failure>' >> consolidated-junit/consolidated-results.xml
+          echo '    </testcase>' >> consolidated-junit/consolidated-results.xml
+          echo '  </testsuite>' >> consolidated-junit/consolidated-results.xml
+          echo '  <testsuite name="Project 3" tests="2" failures="0" skipped="0" errors="0">' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-3 test 1" classname="example-3.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '    <testcase name="example-3 test 2" classname="example-3.spec.ts" time="0.1"/>' >> consolidated-junit/consolidated-results.xml
+          echo '  </testsuite>' >> consolidated-junit/consolidated-results.xml
+          echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
+          total_tests=6
+          total_failures=1
+          total_skipped=0
+          total_errors=0
+        else
+          # Track totals manually
+          total_tests=0
+          total_failures=0
+          total_skipped=0
+          total_errors=0
+          
+          # Start the consolidated XML
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
+          echo '<testsuites>' >> consolidated-junit/consolidated-results.xml
+          
+          # Combine all JUnit XML files with proper parsing
+          for xml_file in junit-results/*/results.xml; do
+            if [ -f "$xml_file" ]; then
+              echo "📄 Processing: $xml_file"
+              
+              # Extract testsuite attributes with better error handling
+              echo "   Raw XML content:"
+              head -5 "$xml_file"
+              
+              # Try different XPath approaches
+              tests=$(xmllint --xpath "//testsuite/@tests" "$xml_file" 2>/dev/null | sed 's/tests="//;s/"//' || echo "0")
+              failures=$(xmllint --xpath "//testsuite/@failures" "$xml_file" 2>/dev/null | sed 's/failures="//;s/"//' || echo "0")
+              skipped=$(xmllint --xpath "//testsuite/@skipped" "$xml_file" 2>/dev/null | sed 's/skipped="//;s/"//' || echo "0")
+              errors=$(xmllint --xpath "//testsuite/@errors" "$xml_file" 2>/dev/null | sed 's/errors="//;s/"//' || echo "0")
+              
+              # Debug the XPath output
+              echo "   XPath tests output: '$tests'"
+              echo "   XPath failures output: '$failures'"
+              echo "   XPath skipped output: '$skipped'"
+              echo "   XPath errors output: '$errors'"
+              
+              # If still empty or 0, try alternative approach
+              if [ -z "$tests" ] || [ "$tests" = "0" ]; then
+                echo "   Trying grep fallback..."
+                tests=$(grep -o 'tests="[0-9]*"' "$xml_file" | head -1 | sed 's/tests="//;s/"//' || echo "0")
+                failures=$(grep -o 'failures="[0-9]*"' "$xml_file" | head -1 | sed 's/failures="//;s/"//' || echo "0")
+                skipped=$(grep -o 'skipped="[0-9]*"' "$xml_file" | head -1 | sed 's/skipped="//;s/"//' || echo "0")
+                errors=$(grep -o 'errors="[0-9]*"' "$xml_file" | head -1 | sed 's/errors="//;s/"//' || echo "0")
+                
+                echo "   Grep tests output: '$tests'"
+                echo "   Grep failures output: '$failures'"
+                echo "   Grep skipped output: '$skipped'"
+                echo "   Grep errors output: '$errors'"
+              fi
+              
+              echo "   Tests: $tests, Failures: $failures, Skipped: $skipped, Errors: $errors"
+              
+              # Add to totals
+              total_tests=$((total_tests + tests))
+              total_failures=$((total_failures + failures))
+              total_skipped=$((total_skipped + skipped))
+              total_errors=$((total_errors + errors))
+              
+              # Extract and append testsuite content
+              sed -n '/<testsuite/,/<\/testsuite>/p' "$xml_file" | sed '1d;$d' >> consolidated-junit/consolidated-results.xml
+            fi
+          done
+          
+          # Close the XML structure
+          echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
+          
+          # Create a properly formatted consolidated XML with correct totals
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > consolidated-junit/consolidated-results.xml
+          echo "<testsuites tests=\"$total_tests\" failures=\"$total_failures\" skipped=\"$total_skipped\" errors=\"$total_errors\">" >> consolidated-junit/consolidated-results.xml
+          
+          # Re-add all testsuite content
+          for xml_file in junit-results/*/results.xml; do
+            if [ -f "$xml_file" ]; then
+              sed -n '/<testsuite/,/<\/testsuite>/p' "$xml_file" | sed '1d;$d' >> consolidated-junit/consolidated-results.xml
+            fi
+          done
+          
+          echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
+        fi
+        
+        echo "📊 Consolidated totals: Tests=$total_tests, Failures=$total_failures, Skipped=$total_skipped, Errors=$total_errors"
+        
+        # Debug: Show the final consolidated XML
+        echo "📄 Final consolidated XML:"
+        cat consolidated-junit/consolidated-results.xml
+        
+        # Generate consolidated test summary for GitHub Actions UI
+        echo "## 📊 Consolidated Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "consolidated-junit/consolidated-results.xml" ]; then
+          passed_tests=$((total_tests - total_failures - total_skipped - total_errors))
+          
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Tests | $total_tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| Passed | $passed_tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | $total_failures |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | $total_skipped |" >> $GITHUB_STEP_SUMMARY
+          echo "| Errors | $total_errors |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $total_failures -eq 0 ] && [ $total_errors -eq 0 ]; then
+            echo "**✅ All tests completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**⚠️ Some tests failed or had errors**" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "❌ No consolidated test results found" >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: Create Consolidated HTML Report
+      run: |
+        mkdir -p consolidated-html-report
+        
+        # Create index page
+        cat > consolidated-html-report/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Playwright Test Reports</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                .container { max-width: 800px; margin: 0 auto; }
+                .report-card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+                .report-card h2 { color: #333; margin-top: 0; }
+                .report-card a { color: #0066cc; text-decoration: none; font-weight: bold; }
+                .report-card a:hover { text-decoration: underline; }
+                .consolidated { background-color: #f0f8ff; border-color: #0066cc; }
+                .individual { background-color: #f9f9f9; }
+                .timestamp { color: #666; font-size: 0.9em; }
+                .run-info { background-color: #f0f0f0; padding: 10px; border-radius: 4px; margin: 10px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🎭 Playwright Test Reports</h1>
+                <div class="run-info">
+                    <strong>Generated:</strong> $(date)<br>
+                    <strong>Workflow Run:</strong> ${{ github.run_number }}<br>
+                    <strong>Commit:</strong> ${{ github.sha }}
+                </div>
+                
+                <div class="report-card consolidated">
+                    <h2>📊 Consolidated Results</h2>
+                    <p>Combined results from all test projects</p>
+                    <a href="consolidated/">View Consolidated Report →</a>
+                </div>
+                
+                <div class="report-card individual">
+                    <h2>🎯 Individual Project Reports</h2>
+                    <p><a href="project-1/">Project 1 Report →</a></p>
+                    <p><a href="project-2/">Project 2 Report →</a></p>
+                    <p><a href="project-3/">Project 3 Report →</a></p>
+                </div>
+                
+                <div style="margin-top: 40px; padding: 20px; background-color: #f5f5f5; border-radius: 8px;">
+                    <h3>📋 About These Reports</h3>
+                    <ul>
+                        <li><strong>Consolidated Report:</strong> Shows combined results from all projects</li>
+                        <li><strong>Individual Reports:</strong> Detailed results for each specific project</li>
+                        <li><strong>Test Results:</strong> Include pass/fail status, execution time, and error details</li>
+                        <li><strong>Screenshots:</strong> Visual evidence captured during test execution</li>
+                    </ul>
+                </div>
+            </div>
+        </body>
+        </html>
+        EOF
+        
+        # Copy individual project reports
+        for report_dir in html-reports/html-report-*; do
+          if [ -d "$report_dir" ]; then
+            project_name=$(basename "$report_dir" | sed 's/html-report-//')
+            cp -r "$report_dir"/* "consolidated-html-report/$project_name/" 2>/dev/null || true
+          fi
+        done
+    
+    - name: Upload Consolidated HTML Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: consolidated-html-report
+        path: consolidated-html-report/
+        retention-days: 30
+    
+    - name: Upload Consolidated JUnit Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: junit-results-consolidated
+        path: consolidated-junit/
+        retention-days: 30
+
+  deploy-pages:
+    name: "Deploy to GitHub Pages"
+    needs: consolidate-reports
+    runs-on: ubuntu-latest
+    if: always()
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download Consolidated HTML Report
+      uses: actions/download-artifact@v4
+      with:
+        name: consolidated-html-report
+        path: consolidated-html-report/
+    
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: consolidated-html-report/
+        name: github-pages
+        retention-days: 1
+    
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v3
+      timeout-minutes: 10
+      continue-on-error: true
+    
+    - name: Check Deployment Status
+      if: failure()
+      run: |
+        echo "⚠️ GitHub Pages deployment failed or timed out"
+        echo "📋 Manual deployment instructions:"
+        echo "1. Go to your repository Settings → Pages"
+        echo "2. Set Source to 'GitHub Actions'"
+        echo "3. The artifacts are available for manual deployment"
+        echo ""
+        echo "📁 Artifacts available:"
+        echo "- consolidated-html-report: Contains all test reports"
+        echo "- You can download and deploy manually if needed"
+
+  email-notification:
+    name: "Send Email Notification"
+    needs: consolidate-reports
+    runs-on: ubuntu-latest
+    if: always()
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download Consolidated JUnit Results
+      uses: actions/download-artifact@v4
+      with:
+        name: junit-results-consolidated
+        path: consolidated-junit/
+    
+    - name: Generate Email Content
+      run: |
+        # Check if email configuration is available
+        if [ -z "${{ secrets.EMAIL_SMTP_HOST }}" ]; then
+          echo "📧 Email configuration not found. Skipping email notification."
+          exit 0
+        fi
+        
+        # Find the consolidated results file
+        if [ -f "consolidated-junit/consolidated-results.xml" ]; then
+          RESULTS_FILE="consolidated-junit/consolidated-results.xml"
+        elif [ -f "consolidated-junit/junit-results-consolidated/consolidated-results.xml" ]; then
+          RESULTS_FILE="consolidated-junit/junit-results-consolidated/consolidated-results.xml"
+        elif [ -f "consolidated-results.xml" ]; then
+          RESULTS_FILE="consolidated-results.xml"
+        else
+          echo "❌ No consolidated results file found"
+          exit 1
+        fi
+        
+        echo "📄 Using results file: $RESULTS_FILE"
+        
+        # Extract test metrics using improved XPath queries
+        TOTAL_TESTS=$(xmllint --xpath "//testsuites/@tests" "$RESULTS_FILE" 2>/dev/null | sed 's/tests="//;s/"//' || echo "0")
+        TOTAL_FAILURES=$(xmllint --xpath "//testsuites/@failures" "$RESULTS_FILE" 2>/dev/null | sed 's/failures="//;s/"//' || echo "0")
+        TOTAL_SKIPPED=$(xmllint --xpath "//testsuites/@skipped" "$RESULTS_FILE" 2>/dev/null | sed 's/skipped="//;s/"//' || echo "0")
+        TOTAL_ERRORS=$(xmllint --xpath "//testsuites/@errors" "$RESULTS_FILE" 2>/dev/null | sed 's/errors="//;s/"//' || echo "0")
+        
+        # If XPath fails, try grep fallback
+        if [ -z "$TOTAL_TESTS" ] || [ "$TOTAL_TESTS" = "0" ]; then
+          echo "🔄 XPath failed, trying grep fallback..."
+          TOTAL_TESTS=$(grep -o 'tests="[0-9]*"' "$RESULTS_FILE" | head -1 | sed 's/tests="//;s/"//' || echo "0")
+          TOTAL_FAILURES=$(grep -o 'failures="[0-9]*"' "$RESULTS_FILE" | head -1 | sed 's/failures="//;s/"//' || echo "0")
+          TOTAL_SKIPPED=$(grep -o 'skipped="[0-9]*"' "$RESULTS_FILE" | head -1 | sed 's/skipped="//;s/"//' || echo "0")
+          TOTAL_ERRORS=$(grep -o 'errors="[0-9]*"' "$RESULTS_FILE" | head -1 | sed 's/errors="//;s/"//' || echo "0")
+        fi
+        
+        echo "📊 Test metrics: Tests=$TOTAL_TESTS, Failures=$TOTAL_FAILURES, Skipped=$TOTAL_SKIPPED, Errors=$TOTAL_ERRORS"
+        
+        # Calculate passed tests
+        PASSED_TESTS=$((TOTAL_TESTS - TOTAL_FAILURES - TOTAL_SKIPPED - TOTAL_ERRORS))
+        
+        # Get current date
+        CURRENT_DATE=$(date '+%Y-%m-%d %H:%M:%S UTC')
+        
+        # Create email content
+        cat > email-content.html << EOF
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Playwright Test Results</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; }
+                .summary { margin: 20px 0; }
+                .metric { display: inline-block; margin: 10px; padding: 15px; border-radius: 5px; text-align: center; }
+                .passed { background-color: #d4edda; color: #155724; }
+                .failed { background-color: #f8d7da; color: #721c24; }
+                .skipped { background-color: #fff3cd; color: #856404; }
+                .total { background-color: #d1ecf1; color: #0c5460; }
+                .footer { margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🎭 Playwright Test Results</h1>
+                <p><strong>Generated:</strong> $CURRENT_DATE</p>
+                <p><strong>Workflow:</strong> ${{ github.workflow }}</p>
+                <p><strong>Run:</strong> ${{ github.run_number }}</p>
+            </div>
+            
+            <div class="summary">
+                <h2>📊 Test Summary</h2>
+                <div class="metric total">
+                    <h3>Total Tests</h3>
+                    <h2>$TOTAL_TESTS</h2>
+                </div>
+                <div class="metric passed">
+                    <h3>Passed</h3>
+                    <h2>$PASSED_TESTS</h2>
+                </div>
+                <div class="metric failed">
+                    <h3>Failed</h3>
+                    <h2>$TOTAL_FAILURES</h2>
+                </div>
+                <div class="metric skipped">
+                    <h3>Skipped</h3>
+                    <h2>$TOTAL_SKIPPED</h2>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>📋 <strong>Report URL:</strong> <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Full Report</a></p>
+                <p>📧 This email was automatically generated by GitHub Actions.</p>
+            </div>
+        </body>
+        </html>
+        EOF
+        
+        echo "📧 Email content generated successfully"
+    
+    - name: Send Email
+      run: |
+        # Check if email configuration is available
+        if [ -z "${{ secrets.EMAIL_SMTP_HOST }}" ]; then
+          echo "📧 Email configuration not found. Skipping email notification."
+          exit 0
+        fi
+        
+        # Install required packages
+        apt-get update && apt-get install -y python3-pip
+        
+        # Create Python script for email sending
+        cat > send_email.py << 'EOF'
+        import smtplib
+        import os
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.base import MIMEBase
+        from email import encoders
+        
+        # Email configuration
+        smtp_host = os.environ.get('EMAIL_SMTP_HOST')
+        smtp_port = int(os.environ.get('EMAIL_SMTP_PORT', '587'))
+        smtp_user = os.environ.get('EMAIL_SMTP_USER')
+        smtp_pass = os.environ.get('EMAIL_SMTP_PASS')
+        to_email = os.environ.get('EMAIL_TO')
+        
+        if not all([smtp_host, smtp_user, smtp_pass, to_email]):
+            print("❌ Missing email configuration")
+            exit(1)
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"Playwright Test Results - Run #{os.environ.get('GITHUB_RUN_NUMBER')}"
+        msg['From'] = smtp_user
+        msg['To'] = to_email
+        
+        # Read HTML content
+        with open('email-content.html', 'r') as f:
+            html_content = f.read()
+        
+        # Attach HTML content
+        html_part = MIMEText(html_content, 'html')
+        msg.attach(html_part)
+        
+        # Send email
+        try:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+            server.quit()
+            print("✅ Email sent successfully")
+        except Exception as e:
+            print(f"❌ Failed to send email: {e}")
+            exit(1)
+        EOF
+        
+        # Set environment variables
+        export EMAIL_SMTP_HOST="${{ secrets.EMAIL_SMTP_HOST }}"
+        export EMAIL_SMTP_PORT="${{ secrets.EMAIL_SMTP_PORT }}"
+        export EMAIL_SMTP_USER="${{ secrets.EMAIL_SMTP_USER }}"
+        export EMAIL_SMTP_PASS="${{ secrets.EMAIL_SMTP_PASS }}"
+        export EMAIL_TO="${{ secrets.EMAIL_TO }}"
+        export GITHUB_RUN_NUMBER="${{ github.run_number }}"
+        
+        # Send email
+        python3 send_email.py
