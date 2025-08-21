@@ -594,13 +594,14 @@ jobs:
     - name: Send Email
       run: |
         # Check if email configuration is available
-        if [ -z "${{ secrets.EMAIL_SMTP_HOST }}" ]; then
+        if [ -z "${{ secrets.EMAIL_SMTP_HOST }}" ] || [ -z "${{ secrets.EMAIL_SMTP_USER }}" ] || [ -z "${{ secrets.EMAIL_SMTP_PASS }}" ] || [ -z "${{ secrets.EMAIL_TO }}" ]; then
           echo "📧 Email configuration not found. Skipping email notification."
+          echo "Required secrets: EMAIL_SMTP_HOST, EMAIL_SMTP_USER, EMAIL_SMTP_PASS, EMAIL_TO"
           exit 0
         fi
         
-        # Install required packages
-        apt-get update && apt-get install -y python3-pip
+        # Install required packages with sudo
+        sudo apt-get update && sudo apt-get install -y python3-pip
         
         # Create Python script for email sending
         cat > send_email.py << 'EOF'
@@ -608,8 +609,6 @@ jobs:
         import os
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
-        from email.mime.base import MIMEBase
-        from email import encoders
         
         # Email configuration
         smtp_host = os.environ.get('EMAIL_SMTP_HOST')
@@ -617,6 +616,11 @@ jobs:
         smtp_user = os.environ.get('EMAIL_SMTP_USER')
         smtp_pass = os.environ.get('EMAIL_SMTP_PASS')
         to_email = os.environ.get('EMAIL_TO')
+        
+        print(f"SMTP Host: {smtp_host}")
+        print(f"SMTP Port: {smtp_port}")
+        print(f"SMTP User: {smtp_user}")
+        print(f"To Email: {to_email}")
         
         if not all([smtp_host, smtp_user, smtp_pass, to_email]):
             print("❌ Missing email configuration")
@@ -638,9 +642,12 @@ jobs:
         
         # Send email
         try:
+            print("🔗 Connecting to SMTP server...")
             server = smtplib.SMTP(smtp_host, smtp_port)
             server.starttls()
+            print("🔐 Logging in...")
             server.login(smtp_user, smtp_pass)
+            print("📤 Sending email...")
             server.send_message(msg)
             server.quit()
             print("✅ Email sent successfully")
