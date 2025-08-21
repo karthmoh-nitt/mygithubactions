@@ -1,0 +1,22 @@
+<testsuites id="" name="" tests="7" failures="0" skipped="0" errors="0" time="11.554724">
+<testsuite name="example.spec.ts" timestamp="2025-08-21T10:31:03.636Z" hostname="project-1-example" tests="2" failures="0" skipped="0" time="0.815" errors="0">
+<testcase name="Project 1 - Example Tests › has title" classname="example.spec.ts" time="0.44">
+</testcase>
+<testcase name="Project 1 - Example Tests › get started link" classname="example.spec.ts" time="0.375">
+</testcase>
+</testsuite>
+<testsuite name="example-2.spec.ts" timestamp="2025-08-21T10:31:03.636Z" hostname="project-2-example-2" tests="2" failures="0" skipped="0" time="0.619" errors="0">
+<testcase name="Project 2 - Example Tests › has title" classname="example-2.spec.ts" time="0.251">
+</testcase>
+<testcase name="Project 2 - Example Tests › get started link" classname="example-2.spec.ts" time="0.368">
+</testcase>
+</testsuite>
+<testsuite name="example-3.spec.ts" timestamp="2025-08-21T10:31:03.636Z" hostname="project-3-example-3" tests="3" failures="0" skipped="0" time="7.821" errors="0">
+<testcase name="Project 3 - Example Tests › has title" classname="example-3.spec.ts" time="3.817">
+</testcase>
+<testcase name="Project 3 - Example Tests › get started link" classname="example-3.spec.ts" time="3.056">
+</testcase>
+<testcase name="Project 3 - Example Tests › tenant specific functionality" classname="example-3.spec.ts" time="0.948">
+</testcase>
+</testsuite>
+</testsuites>
