@@ -73,27 +73,23 @@ jobs:
           echo "📊 Consolidating JUnit results..."
           mkdir -p consolidated-junit
           
-          # Copy individual JUnit files
-          cp project-reports/project-1/results.xml consolidated-junit/project-1-results.xml
-          cp project-reports/project-2/results.xml consolidated-junit/project-2-results.xml
-          cp project-reports/project-3/results.xml consolidated-junit/project-3-results.xml
+          # Copy the original JUnit file directly (since all projects use the same file)
+          cp test-results/results.xml consolidated-junit/consolidated-results.xml
           
-          # Create consolidated JUnit XML
-          cat > consolidated-junit/consolidated-results.xml << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <testsuites>
-          EOF
-          
-          # Extract testsuite elements from each project and combine
-          for file in consolidated-junit/project-*-results.xml; do
-            if [ -f "$file" ]; then
-              echo "Processing $file..."
-              # Extract testsuite content (remove XML declaration and testsuites wrapper)
-              sed -n '/<testsuite/,/<\/testsuite>/p' "$file" >> consolidated-junit/consolidated-results.xml
-            fi
-          done
-          
-          echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
+          # Debug: Show the JUnit file contents
+          echo "📄 JUnit file contents:"
+          if [ -f "consolidated-junit/consolidated-results.xml" ]; then
+            echo "✅ JUnit file found"
+            head -10 consolidated-junit/consolidated-results.xml
+            echo ""
+            echo "🔍 Checking for testsuites element:"
+            grep -o 'testsuites' consolidated-junit/consolidated-results.xml || echo "No testsuites found"
+            echo ""
+            echo "🔍 Checking for tests attribute:"
+            grep -o 'tests="[^"]*"' consolidated-junit/consolidated-results.xml || echo "No tests attribute found"
+          else
+            echo "❌ JUnit file not found"
+          fi
           
           echo "✅ JUnit results consolidated"
 
