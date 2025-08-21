@@ -13,7 +13,7 @@ test.describe('Project 1 - Example Tests', () => {
 
     // Click the get started link.
     await page.getByRole('link', { name: 'Get started' }).click();
-    //Test comment
+
     // Expects page to have a heading with the name of Installation.
     await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
   });
