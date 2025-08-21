@@ -46,6 +46,61 @@ jobs:
       - name: Run Tests
         run: npx playwright test
 
+      - name: Generate Individual Project Reports
+        run: |
+          # Create individual project reports by running tests for each project separately
+          echo "🎯 Generating individual project reports..."
+          
+          # Project 1
+          mkdir -p project-reports/project-1
+          npx playwright test tests/example.spec.ts --reporter=html --output-dir=project-reports/project-1 --reporter=junit --output-file=project-reports/project-1/results.xml
+          
+          # Project 2  
+          mkdir -p project-reports/project-2
+          npx playwright test tests/example-2.spec.ts --reporter=html --output-dir=project-reports/project-2 --reporter=junit --output-file=project-reports/project-2/results.xml
+          
+          # Project 3
+          mkdir -p project-reports/project-3
+          npx playwright test tests/example-3.spec.ts --reporter=html --output-dir=project-reports/project-3 --reporter=junit --output-file=project-reports/project-3/results.xml
+          
+          echo "✅ Individual project reports generated"
+
+      - name: Consolidate JUnit Results
+        run: |
+          echo "📊 Consolidating JUnit results..."
+          mkdir -p consolidated-junit
+          
+          # Copy individual JUnit files
+          cp project-reports/project-1/results.xml consolidated-junit/project-1-results.xml
+          cp project-reports/project-2/results.xml consolidated-junit/project-2-results.xml
+          cp project-reports/project-3/results.xml consolidated-junit/project-3-results.xml
+          
+          # Create consolidated JUnit XML
+          cat > consolidated-junit/consolidated-results.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites>
+          EOF
+          
+          # Extract testsuite elements from each project and combine
+          for file in consolidated-junit/project-*-results.xml; do
+            if [ -f "$file" ]; then
+              echo "Processing $file..."
+              # Extract testsuite content (remove XML declaration and testsuites wrapper)
+              sed -n '/<testsuite/,/<\/testsuite>/p' "$file" >> consolidated-junit/consolidated-results.xml
+            fi
+          done
+          
+          echo '</testsuites>' >> consolidated-junit/consolidated-results.xml
+          
+          echo "✅ JUnit results consolidated"
+
+      - name: Upload JUnit Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results-consolidated
+          path: consolidated-junit/
+          retention-days: 30
+
       - name: Debug - Check Playwright Report
         run: |
           echo "📁 Checking playwright-report directory:"
@@ -126,149 +181,10 @@ jobs:
             echo "<h1>No consolidated report available</h1>" > consolidated-html-report/consolidated/index.html
           fi
 
-          # Create individual project report directories
-          mkdir -p consolidated-html-report/project-1
-          mkdir -p consolidated-html-report/project-2
-          mkdir -p consolidated-html-report/project-3
-
-          # Create individual project report pages
-          cat > consolidated-html-report/project-1/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Project 1 - Test Results</title>
-              <style>
-                  body { font-family: Arial, sans-serif; margin: 40px; }
-                  .container { max-width: 800px; margin: 0 auto; }
-                  .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-                  .test-result { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }
-                  .passed { border-left: 4px solid #28a745; background-color: #f8fff9; }
-                  .back-link { margin-top: 20px; }
-                  .back-link a { color: #0066cc; text-decoration: none; font-weight: bold; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <div class="header">
-                      <h1>🎯 Project 1 - Example Tests</h1>
-                      <p><strong>Status:</strong> ✅ All tests passed</p>
-                      <p><strong>Tests:</strong> 2</p>
-                      <p><strong>Duration:</strong> ~1 second</p>
-                  </div>
-                  
-                  <div class="test-result passed">
-                      <h3>✅ has title</h3>
-                      <p><strong>Duration:</strong> 659ms</p>
-                      <p><strong>File:</strong> tests/example.spec.ts:4:7</p>
-                  </div>
-                  
-                  <div class="test-result passed">
-                      <h3>✅ get started link</h3>
-                      <p><strong>Duration:</strong> 401ms</p>
-                      <p><strong>File:</strong> tests/example.spec.ts:11:7</p>
-                  </div>
-                  
-                  <div class="back-link">
-                      <a href="../">← Back to Main Report</a>
-                  </div>
-              </div>
-          </body>
-          </html>
-          EOF
-
-          cat > consolidated-html-report/project-2/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Project 2 - Test Results</title>
-              <style>
-                  body { font-family: Arial, sans-serif; margin: 40px; }
-                  .container { max-width: 800px; margin: 0 auto; }
-                  .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-                  .test-result { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }
-                  .passed { border-left: 4px solid #28a745; background-color: #f8fff9; }
-                  .back-link { margin-top: 20px; }
-                  .back-link a { color: #0066cc; text-decoration: none; font-weight: bold; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <div class="header">
-                      <h1>🎯 Project 2 - Example Tests</h1>
-                      <p><strong>Status:</strong> ✅ All tests passed</p>
-                      <p><strong>Tests:</strong> 2</p>
-                      <p><strong>Duration:</strong> ~0.7 seconds</p>
-                  </div>
-                  
-                  <div class="test-result passed">
-                      <h3>✅ has title</h3>
-                      <p><strong>Duration:</strong> 279ms</p>
-                      <p><strong>File:</strong> tests/example-2.spec.ts:4:7</p>
-                  </div>
-                  
-                  <div class="test-result passed">
-                      <h3>✅ get started link</h3>
-                      <p><strong>Duration:</strong> 382ms</p>
-                      <p><strong>File:</strong> tests/example-2.spec.ts:11:7</p>
-                  </div>
-                  
-                  <div class="back-link">
-                      <a href="../">← Back to Main Report</a>
-                  </div>
-              </div>
-          </body>
-          </html>
-          EOF
-
-          cat > consolidated-html-report/project-3/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Project 3 - Test Results</title>
-              <style>
-                  body { font-family: Arial, sans-serif; margin: 40px; }
-                  .container { max-width: 800px; margin: 0 auto; }
-                  .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-                  .test-result { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }
-                  .passed { border-left: 4px solid #28a745; background-color: #f8fff9; }
-                  .back-link { margin-top: 20px; }
-                  .back-link a { color: #0066cc; text-decoration: none; font-weight: bold; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <div class="header">
-                      <h1>🎯 Project 3 - Example Tests</h1>
-                      <p><strong>Status:</strong> ✅ All tests passed</p>
-                      <p><strong>Tests:</strong> 3</p>
-                      <p><strong>Duration:</strong> ~8.3 seconds</p>
-                  </div>
-                  
-                  <div class="test-result passed">
-                      <h3>✅ has title</h3>
-                      <p><strong>Duration:</strong> 4.0s</p>
-                      <p><strong>File:</strong> tests/example-3.spec.ts:5:7</p>
-                  </div>
-                  
-                  <div class="test-result passed">
-                      <h3>✅ get started link</h3>
-                      <p><strong>Duration:</strong> 3.1s</p>
-                      <p><strong>File:</strong> tests/example-3.spec.ts:15:7</p>
-                  </div>
-                  
-                  <div class="test-result passed">
-                      <h3>✅ tenant specific functionality</h3>
-                      <p><strong>Duration:</strong> 1.2s</p>
-                      <p><strong>File:</strong> tests/example-3.spec.ts:28:7</p>
-                  </div>
-                  
-                  <div class="back-link">
-                      <a href="../">← Back to Main Report</a>
-                  </div>
-              </div>
-          </body>
-          </html>
-          EOF
+          # Copy individual Playwright reports
+          cp -r project-reports/project-1/* consolidated-html-report/project-1/ 2>/dev/null || echo "⚠️ Project 1 report not found"
+          cp -r project-reports/project-2/* consolidated-html-report/project-2/ 2>/dev/null || echo "⚠️ Project 2 report not found"
+          cp -r project-reports/project-3/* consolidated-html-report/project-3/ 2>/dev/null || echo "⚠️ Project 3 report not found"
 
           echo "📁 Consolidated HTML report created"
           ls -la consolidated-html-report/
@@ -285,3 +201,176 @@ jobs:
           echo "✅ GitHub Pages deployed successfully!"
           echo "🌐 URL: https://karthmoh-nitt.github.io/mygithubactions/"
           echo "📊 HTML Reports are now available!"
+
+  email-notification:
+    runs-on: ubuntu-latest
+    needs: test-and-deploy
+    if: always()
+    steps:
+      - name: Check if email secrets are configured
+        run: |
+          if [ -z "${{ secrets.EMAIL_SMTP_HOST }}" ]; then
+            echo "⚠️ Email SMTP host not configured, skipping email notification"
+            exit 0
+          fi
+          echo "✅ Email configuration found, proceeding with notification"
+
+      - name: Download JUnit Results
+        uses: actions/download-artifact@v4
+        with:
+          name: junit-results-consolidated
+          path: consolidated-junit
+
+      - name: Generate Email Content
+        run: |
+          echo "📧 Generating email content..."
+          
+          # Find the consolidated JUnit XML file
+          JUNIT_FILE=""
+          for file in consolidated-junit/*.xml; do
+            if [ -f "$file" ]; then
+              JUNIT_FILE="$file"
+              break
+            fi
+          done
+          
+          if [ -z "$JUNIT_FILE" ]; then
+            echo "⚠️ No JUnit XML file found"
+            TOTAL_TESTS=0
+            PASSED_TESTS=0
+            FAILED_TESTS=0
+          else
+            echo "📄 Found JUnit file: $JUNIT_FILE"
+            
+            # Extract test counts using xmllint and grep fallback
+            TOTAL_TESTS=$(xmllint --xpath "//testsuites/@tests" "$JUNIT_FILE" 2>/dev/null | sed 's/tests="//' | sed 's/"//' || grep -o 'tests="[^"]*"' "$JUNIT_FILE" | head -1 | sed 's/tests="//' | sed 's/"//')
+            PASSED_TESTS=$(xmllint --xpath "//testsuites/@tests - //testsuites/@failures" "$JUNIT_FILE" 2>/dev/null || echo "$TOTAL_TESTS")
+            FAILED_TESTS=$(xmllint --xpath "//testsuites/@failures" "$JUNIT_FILE" 2>/dev/null | sed 's/failures="//' | sed 's/"//' || grep -o 'failures="[^"]*"' "$JUNIT_FILE" | head -1 | sed 's/failures="//' | sed 's/"//')
+            
+            # Set defaults if extraction failed
+            TOTAL_TESTS=${TOTAL_TESTS:-0}
+            PASSED_TESTS=${PASSED_TESTS:-0}
+            FAILED_TESTS=${FAILED_TESTS:-0}
+          fi
+          
+          CURRENT_DATE=$(date '+%Y-%m-%d %H:%M:%S UTC')
+          
+          cat > email-content.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Playwright Test Results</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 20px; }
+                  .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                  .stats { display: flex; gap: 20px; margin: 20px 0; }
+                  .stat-card { background-color: #f9f9f9; padding: 15px; border-radius: 8px; text-align: center; flex: 1; }
+                  .passed { border-left: 4px solid #28a745; }
+                  .failed { border-left: 4px solid #dc3545; }
+                  .total { border-left: 4px solid #007bff; }
+                  .links { margin-top: 20px; }
+                  .links a { color: #0066cc; text-decoration: none; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>🎭 Playwright Test Results</h1>
+                  <p><strong>Generated:</strong> $CURRENT_DATE</p>
+                  <p><strong>Workflow Run:</strong> ${{ github.run_number }}</p>
+                  <p><strong>Commit:</strong> ${{ github.sha }}</p>
+              </div>
+              
+              <div class="stats">
+                  <div class="stat-card total">
+                      <h3>Total Tests</h3>
+                      <h2>$TOTAL_TESTS</h2>
+                  </div>
+                  <div class="stat-card passed">
+                      <h3>Passed</h3>
+                      <h2>$PASSED_TESTS</h2>
+                  </div>
+                  <div class="stat-card failed">
+                      <h3>Failed</h3>
+                      <h2>$FAILED_TESTS</h2>
+                  </div>
+              </div>
+              
+              <div class="links">
+                  <h3>📊 View Detailed Reports:</h3>
+                  <p><a href="https://karthmoh-nitt.github.io/mygithubactions/">🌐 Main Report Dashboard</a></p>
+                  <p><a href="https://karthmoh-nitt.github.io/mygithubactions/consolidated/">📋 Consolidated Report</a></p>
+                  <p><a href="https://karthmoh-nitt.github.io/mygithubactions/project-1/">🎯 Project 1 Report</a></p>
+                  <p><a href="https://karthmoh-nitt.github.io/mygithubactions/project-2/">🎯 Project 2 Report</a></p>
+                  <p><a href="https://karthmoh-nitt.github.io/mygithubactions/project-3/">🎯 Project 3 Report</a></p>
+              </div>
+          </body>
+          </html>
+          EOF
+          
+          echo "✅ Email content generated with:"
+          echo "   Total Tests: $TOTAL_TESTS"
+          echo "   Passed: $PASSED_TESTS"
+          echo "   Failed: $FAILED_TESTS"
+
+      - name: Send Email Notification
+        run: |
+          echo "📧 Sending email notification..."
+          
+          # Install Python and required packages
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip
+          pip3 install secure-smtplib
+          
+          # Create Python script for sending email
+          cat > send_email.py << 'EOF'
+          import smtplib
+          import os
+          from email.mime.text import MIMEText
+          from email.mime.multipart import MIMEMultipart
+          
+          # Email configuration
+          smtp_host = os.environ.get('EMAIL_SMTP_HOST')
+          smtp_port = int(os.environ.get('EMAIL_SMTP_PORT', '587'))
+          smtp_user = os.environ.get('EMAIL_SMTP_USER')
+          smtp_pass = os.environ.get('EMAIL_SMTP_PASS')
+          to_email = os.environ.get('EMAIL_TO')
+          
+          if not all([smtp_host, smtp_user, smtp_pass, to_email]):
+              print("❌ Missing email configuration")
+              exit(1)
+          
+          # Create message
+          msg = MIMEMultipart('alternative')
+          msg['Subject'] = f"Playwright Test Results - Run #{os.environ.get('GITHUB_RUN_NUMBER')}"
+          msg['From'] = smtp_user
+          msg['To'] = to_email
+          
+          # Read HTML content
+          with open('email-content.html', 'r') as f:
+              html_content = f.read()
+          
+          msg.attach(MIMEText(html_content, 'html'))
+          
+          # Send email
+          try:
+              server = smtplib.SMTP(smtp_host, smtp_port)
+              server.starttls()
+              server.login(smtp_user, smtp_pass)
+              server.send_message(msg)
+              server.quit()
+              print("✅ Email sent successfully!")
+          except Exception as e:
+              print(f"❌ Failed to send email: {e}")
+              exit(1)
+          EOF
+          
+          # Set environment variables
+          export EMAIL_SMTP_HOST="${{ secrets.EMAIL_SMTP_HOST }}"
+          export EMAIL_SMTP_PORT="${{ secrets.EMAIL_SMTP_PORT }}"
+          export EMAIL_SMTP_USER="${{ secrets.EMAIL_SMTP_USER }}"
+          export EMAIL_SMTP_PASS="${{ secrets.EMAIL_SMTP_PASS }}"
+          export EMAIL_TO="${{ secrets.EMAIL_TO }}"
+          export GITHUB_RUN_NUMBER="${{ github.run_number }}"
+          
+          # Send email
+          python3 send_email.py
