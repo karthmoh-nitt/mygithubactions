@@ -191,9 +191,13 @@ jobs:
           fi
 
           # Copy individual Playwright reports
-          cp -r project-reports/project-1/* consolidated-html-report/project-1/ 2>/dev/null || echo "⚠️ Project 1 report not found"
-          cp -r project-reports/project-2/* consolidated-html-report/project-2/ 2>/dev/null || echo "⚠️ Project 2 report not found"
-          cp -r project-reports/project-3/* consolidated-html-report/project-3/ 2>/dev/null || echo "⚠️ Project 3 report not found"
+          mkdir -p consolidated-html-report/project-1
+          mkdir -p consolidated-html-report/project-2
+          mkdir -p consolidated-html-report/project-3
+          
+          cp -r project-reports/project-1/* consolidated-html-report/project-1/ 2>/dev/null && echo "✅ Project 1 report copied" || echo "⚠️ Project 1 report not found"
+          cp -r project-reports/project-2/* consolidated-html-report/project-2/ 2>/dev/null && echo "✅ Project 2 report copied" || echo "⚠️ Project 2 report not found"
+          cp -r project-reports/project-3/* consolidated-html-report/project-3/ 2>/dev/null && echo "✅ Project 3 report copied" || echo "⚠️ Project 3 report not found"
 
           echo "📁 Consolidated HTML report created"
           ls -la consolidated-html-report/
