@@ -1,0 +1,54 @@
+name: Clear GitHub Pages Content
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  clear-pages:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Empty Pages Content
+        run: |
+          mkdir -p empty-pages
+          cat > empty-pages/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>GitHub Pages - Clearing Old Content</title>
+              <style>
+                  body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                  .message { background-color: #f0f8ff; padding: 20px; border-radius: 8px; }
+              </style>
+          </head>
+          <body>
+              <div class="message">
+                  <h1>🔄 Clearing Old Content</h1>
+                  <p>GitHub Pages is being updated with new HTML reports.</p>
+                  <p>Please wait for the next workflow run to complete.</p>
+                  <p><strong>Expected URL:</strong> <a href="https://karthmoh-nitt.github.io/mygithubactions/">https://karthmoh-nitt.github.io/mygithubactions/</a></p>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Empty Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: empty-pages/
+
+      - name: Deploy Empty Content
+        uses: actions/deploy-pages@v3
+
+      - name: Show Status
+        run: |
+          echo "✅ Old content cleared successfully!"
+          echo "📊 Next workflow run will deploy HTML reports"
+          echo "🌐 Check: https://karthmoh-nitt.github.io/mygithubactions/"

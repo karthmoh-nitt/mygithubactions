@@ -427,8 +427,75 @@ jobs:
         path: consolidated-junit/
         retention-days: 30
 
-  # Note: GitHub Pages deployment is handled by a separate workflow (pages.yml)
-  # This ensures proper artifact handling and avoids run-id conflicts
+  deploy-pages:
+    name: "Deploy to GitHub Pages"
+    needs: consolidate-reports
+    runs-on: ubuntu-latest
+    if: always()
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download Consolidated HTML Report
+      uses: actions/download-artifact@v4
+      with:
+        name: consolidated-html-report
+        path: consolidated-html-report/
+    
+    - name: Debug - Check Artifact Contents
+      run: |
+        echo "📁 Contents of consolidated-html-report:"
+        ls -la consolidated-html-report/
+        echo ""
+        echo "📄 HTML file contents:"
+        if [ -f "consolidated-html-report/index.html" ]; then
+          head -20 consolidated-html-report/index.html
+        else
+          echo "❌ index.html not found!"
+          echo "📁 Available files:"
+          find consolidated-html-report/ -type f
+        fi
+    
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+    
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: consolidated-html-report/
+    
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v3
+      timeout-minutes: 10
+      continue-on-error: true
+    
+    - name: Show Deployment URL
+      if: success()
+      run: |
+        echo "✅ GitHub Pages deployed successfully!"
+        echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
+        echo "📊 HTML Reports are now available at: https://karthmoh-nitt.github.io/mygithubactions/"
+    
+    - name: Check Deployment Status
+      if: failure()
+      run: |
+        echo "⚠️ GitHub Pages deployment failed"
+        echo ""
+        echo "📋 Troubleshooting steps:"
+        echo "1. Go to https://github.com/karthmoh-nitt/mygithubactions/settings/pages"
+        echo "2. Ensure 'Source' is set to 'GitHub Actions'"
+        echo "3. Check that 'Pages' permission is enabled for GITHUB_TOKEN"
+        echo ""
+        echo "📁 Artifacts available for manual deployment:"
+        echo "- consolidated-html-report: Contains all test reports"
+        echo "- Download from workflow artifacts and deploy manually"
+        echo ""
+        echo "🔗 Alternative access:"
+        echo "- Download artifacts from workflow run"
+        echo "- Extract and open index.html in browser"
 
   email-notification:
     name: "Send Email Notification"
