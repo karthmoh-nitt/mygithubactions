@@ -3,6 +3,11 @@ name: Clear GitHub Pages Content
 on:
   workflow_dispatch:  # Manual trigger only
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   clear-pages:
     runs-on: ubuntu-latest
