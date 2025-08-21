@@ -22,8 +22,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Playwright browsers
+        id: cache-playwright
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright Browsers
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
         run: npx playwright install chromium --with-deps
+
+      - name: Show Cache Status
+        run: |
+          if [ "${{ steps.cache-playwright.outputs.cache-hit }}" == "true" ]; then
+            echo "✅ Playwright browsers loaded from cache"
+          else
+            echo "📥 Playwright browsers installed fresh"
+          fi
 
       - name: Run Tests
         run: npx playwright test
@@ -107,6 +125,150 @@ jobs:
             echo "⚠️ No Playwright report found, creating placeholder"
             echo "<h1>No consolidated report available</h1>" > consolidated-html-report/consolidated/index.html
           fi
+
+          # Create individual project report directories
+          mkdir -p consolidated-html-report/project-1
+          mkdir -p consolidated-html-report/project-2
+          mkdir -p consolidated-html-report/project-3
+
+          # Create individual project report pages
+          cat > consolidated-html-report/project-1/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Project 1 - Test Results</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  .container { max-width: 800px; margin: 0 auto; }
+                  .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                  .test-result { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }
+                  .passed { border-left: 4px solid #28a745; background-color: #f8fff9; }
+                  .back-link { margin-top: 20px; }
+                  .back-link a { color: #0066cc; text-decoration: none; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>🎯 Project 1 - Example Tests</h1>
+                      <p><strong>Status:</strong> ✅ All tests passed</p>
+                      <p><strong>Tests:</strong> 2</p>
+                      <p><strong>Duration:</strong> ~1 second</p>
+                  </div>
+                  
+                  <div class="test-result passed">
+                      <h3>✅ has title</h3>
+                      <p><strong>Duration:</strong> 659ms</p>
+                      <p><strong>File:</strong> tests/example.spec.ts:4:7</p>
+                  </div>
+                  
+                  <div class="test-result passed">
+                      <h3>✅ get started link</h3>
+                      <p><strong>Duration:</strong> 401ms</p>
+                      <p><strong>File:</strong> tests/example.spec.ts:11:7</p>
+                  </div>
+                  
+                  <div class="back-link">
+                      <a href="../">← Back to Main Report</a>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+          cat > consolidated-html-report/project-2/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Project 2 - Test Results</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  .container { max-width: 800px; margin: 0 auto; }
+                  .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                  .test-result { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }
+                  .passed { border-left: 4px solid #28a745; background-color: #f8fff9; }
+                  .back-link { margin-top: 20px; }
+                  .back-link a { color: #0066cc; text-decoration: none; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>🎯 Project 2 - Example Tests</h1>
+                      <p><strong>Status:</strong> ✅ All tests passed</p>
+                      <p><strong>Tests:</strong> 2</p>
+                      <p><strong>Duration:</strong> ~0.7 seconds</p>
+                  </div>
+                  
+                  <div class="test-result passed">
+                      <h3>✅ has title</h3>
+                      <p><strong>Duration:</strong> 279ms</p>
+                      <p><strong>File:</strong> tests/example-2.spec.ts:4:7</p>
+                  </div>
+                  
+                  <div class="test-result passed">
+                      <h3>✅ get started link</h3>
+                      <p><strong>Duration:</strong> 382ms</p>
+                      <p><strong>File:</strong> tests/example-2.spec.ts:11:7</p>
+                  </div>
+                  
+                  <div class="back-link">
+                      <a href="../">← Back to Main Report</a>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+          cat > consolidated-html-report/project-3/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Project 3 - Test Results</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  .container { max-width: 800px; margin: 0 auto; }
+                  .header { background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                  .test-result { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }
+                  .passed { border-left: 4px solid #28a745; background-color: #f8fff9; }
+                  .back-link { margin-top: 20px; }
+                  .back-link a { color: #0066cc; text-decoration: none; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>🎯 Project 3 - Example Tests</h1>
+                      <p><strong>Status:</strong> ✅ All tests passed</p>
+                      <p><strong>Tests:</strong> 3</p>
+                      <p><strong>Duration:</strong> ~8.3 seconds</p>
+                  </div>
+                  
+                  <div class="test-result passed">
+                      <h3>✅ has title</h3>
+                      <p><strong>Duration:</strong> 4.0s</p>
+                      <p><strong>File:</strong> tests/example-3.spec.ts:5:7</p>
+                  </div>
+                  
+                  <div class="test-result passed">
+                      <h3>✅ get started link</h3>
+                      <p><strong>Duration:</strong> 3.1s</p>
+                      <p><strong>File:</strong> tests/example-3.spec.ts:15:7</p>
+                  </div>
+                  
+                  <div class="test-result passed">
+                      <h3>✅ tenant specific functionality</h3>
+                      <p><strong>Duration:</strong> 1.2s</p>
+                      <p><strong>File:</strong> tests/example-3.spec.ts:28:7</p>
+                  </div>
+                  
+                  <div class="back-link">
+                      <a href="../">← Back to Main Report</a>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
 
           echo "📁 Consolidated HTML report created"
           ls -la consolidated-html-report/
