@@ -60,7 +60,8 @@ jobs:
           echo "📁 Checking project directories:"
           ls -la project-reports/ || echo "project-reports directory not found"
           
-          # Copy the main HTML report to each project (they'll all have the same content)
+          # For now, copy the main HTML report to each project (they'll all have the same content)
+          # TODO: In the future, we can create project-specific reports by filtering tests
           echo "📋 Copying HTML reports..."
           cp -r playwright-report/* project-reports/project-1/ 2>/dev/null && echo "✅ Project 1 HTML copied" || echo "⚠️ No HTML report for Project 1"
           cp -r playwright-report/* project-reports/project-2/ 2>/dev/null && echo "✅ Project 2 HTML copied" || echo "⚠️ No HTML report for Project 2"
@@ -219,11 +220,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-and-deploy
     if: always()
+    timeout-minutes: 5
     steps:
       - name: Check if email secrets are configured
         run: |
-          if [ -z "${{ secrets.EMAIL_SMTP_HOST }}" ]; then
-            echo "⚠️ Email SMTP host not configured, skipping email notification"
+          if [ -z "${{ secrets.EMAIL_USERNAME }}" ] || [ -z "${{ secrets.EMAIL_PASSWORD }}" ] || [ -z "${{ secrets.EMAIL_RECIPIENTS }}" ]; then
+            echo "⚠️ Email configuration not found, skipping email notification"
             exit 0
           fi
           echo "✅ Email configuration found, proceeding with notification"
@@ -256,9 +258,9 @@ jobs:
             echo "📄 Found JUnit file: $JUNIT_FILE"
             
             # Extract test counts using xmllint and grep fallback
-            TOTAL_TESTS=$(xmllint --xpath "//testsuites/@tests" "$JUNIT_FILE" 2>/dev/null | sed 's/tests="//' | sed 's/"//' || grep -o 'tests="[^"]*"' "$JUNIT_FILE" | head -1 | sed 's/tests="//' | sed 's/"//')
-            PASSED_TESTS=$(xmllint --xpath "//testsuites/@tests - //testsuites/@failures" "$JUNIT_FILE" 2>/dev/null || echo "$TOTAL_TESTS")
-            FAILED_TESTS=$(xmllint --xpath "//testsuites/@failures" "$JUNIT_FILE" 2>/dev/null | sed 's/failures="//' | sed 's/"//' || grep -o 'failures="[^"]*"' "$JUNIT_FILE" | head -1 | sed 's/failures="//' | sed 's/"//')
+            TOTAL_TESTS=$(xmllint --xpath "//testsuites/@tests" "$JUNIT_FILE" 2>/dev/null | sed 's/tests="\([^"]*\)"/\1/' || grep -o 'tests="[^"]*"' "$JUNIT_FILE" | head -1 | sed 's/tests="\([^"]*\)"/\1/')
+            PASSED_TESTS=$(xmllint --xpath "//testsuites/@tests" "$JUNIT_FILE" 2>/dev/null | sed 's/tests="\([^"]*\)"/\1/' || grep -o 'tests="[^"]*"' "$JUNIT_FILE" | head -1 | sed 's/tests="\([^"]*\)"/\1/')
+            FAILED_TESTS=$(xmllint --xpath "//testsuites/@failures" "$JUNIT_FILE" 2>/dev/null | sed 's/failures="\([^"]*\)"/\1/' || grep -o 'failures="[^"]*"' "$JUNIT_FILE" | head -1 | sed 's/failures="\([^"]*\)"/\1/' || echo "0")
             
             # Set defaults if extraction failed
             TOTAL_TESTS=${TOTAL_TESTS:-0}
