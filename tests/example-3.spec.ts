@@ -26,15 +26,29 @@ test('get started link', async ({ page }) => {
 
 // Example of tenant-specific test
 test('tenant specific functionality', async ({ page }) => {
+  console.log('🚀 Starting tenant specific functionality test');
+  
   // Use helper function for tenant-specific URL
   const tenantUrl = getTenantUrl('/');
   console.log(`Testing tenant: ${config.tenantId} on environment: ${config.environment}`);
   console.log(`Target URL: ${tenantUrl}`);
   
-  await page.goto(tenantUrl);
-  await page.waitForLoadState('networkidle');
-  await page.screenshot({ path: `tenant-dashboard-${config.environment}-${config.tenantId}.png` });
-  // Add your tenant-specific assertions here
-  //await expect(page).toHaveTitle(/Playwright/);
+  try {
+    await page.goto(tenantUrl);
+    console.log('✅ Successfully navigated to tenant URL');
+    
+    await page.waitForLoadState('networkidle');
+    console.log('✅ Page loaded successfully');
+    
+    await page.screenshot({ path: `tenant-dashboard-${config.environment}-${config.tenantId}.png` });
+    console.log('✅ Screenshot taken successfully');
+    
+    // Add your tenant-specific assertions here
+    //await expect(page).toHaveTitle(/Playwright/);
+    console.log('✅ Tenant test completed successfully');
+  } catch (error) {
+    console.error('❌ Error in tenant test:', error);
+    throw error;
+  }
 });
 
