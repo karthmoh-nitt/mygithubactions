@@ -56,15 +56,25 @@ jobs:
           mkdir -p project-reports/project-2
           mkdir -p project-reports/project-3
           
+          # Debug: Check if directories were created
+          echo "📁 Checking project directories:"
+          ls -la project-reports/ || echo "project-reports directory not found"
+          
           # Copy the main HTML report to each project (they'll all have the same content)
-          cp -r playwright-report/* project-reports/project-1/ 2>/dev/null || echo "⚠️ No HTML report for Project 1"
-          cp -r playwright-report/* project-reports/project-2/ 2>/dev/null || echo "⚠️ No HTML report for Project 2"
-          cp -r playwright-report/* project-reports/project-3/ 2>/dev/null || echo "⚠️ No HTML report for Project 3"
+          echo "📋 Copying HTML reports..."
+          cp -r playwright-report/* project-reports/project-1/ 2>/dev/null && echo "✅ Project 1 HTML copied" || echo "⚠️ No HTML report for Project 1"
+          cp -r playwright-report/* project-reports/project-2/ 2>/dev/null && echo "✅ Project 2 HTML copied" || echo "⚠️ No HTML report for Project 2"
+          cp -r playwright-report/* project-reports/project-3/ 2>/dev/null && echo "✅ Project 3 HTML copied" || echo "⚠️ No HTML report for Project 3"
           
           # Copy JUnit results to each project
-          cp test-results/results.xml project-reports/project-1/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 1"
-          cp test-results/results.xml project-reports/project-2/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 2"
-          cp test-results/results.xml project-reports/project-3/results.xml 2>/dev/null || echo "⚠️ No JUnit results for Project 3"
+          echo "📊 Copying JUnit results..."
+          cp test-results/results.xml project-reports/project-1/results.xml 2>/dev/null && echo "✅ Project 1 JUnit copied" || echo "⚠️ No JUnit results for Project 1"
+          cp test-results/results.xml project-reports/project-2/results.xml 2>/dev/null && echo "✅ Project 2 JUnit copied" || echo "⚠️ No JUnit results for Project 2"
+          cp test-results/results.xml project-reports/project-3/results.xml 2>/dev/null && echo "✅ Project 3 JUnit copied" || echo "⚠️ No JUnit results for Project 3"
+          
+          # Debug: Check final structure
+          echo "📁 Final project-reports structure:"
+          find project-reports/ -type f -name "*.html" -o -name "*.xml" | head -10
           
           echo "✅ Individual project reports organized"
 
