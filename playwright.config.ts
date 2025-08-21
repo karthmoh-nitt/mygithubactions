@@ -16,9 +16,23 @@ export default defineConfig({
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['list'],
-    ['allure-playwright'],
-    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['allure-playwright', {
+      detail: true,
+      suiteTitle: false,
+      environmentInfo: {
+        framework: 'playwright',
+        language: 'typescript'
+      },
+      attachments: true
+    }],
+    ['html', { 
+      outputFolder: 'playwright-report', 
+      open: 'never',
+      attachmentsBaseURL: 'attachments/',
+      showTrace: true
+    }],
     ['junit', { outputFile: 'test-results/results.xml', attachments: true }],  // JUnit reporter for CI integration
+    ['json', { outputFile: 'test-results/results.json' }],  // JSON reporter for custom dashboards
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
