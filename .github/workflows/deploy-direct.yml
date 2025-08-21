@@ -28,6 +28,19 @@ jobs:
       - name: Run Tests
         run: npx playwright test
 
+      - name: Debug - Check Playwright Report
+        run: |
+          echo "📁 Checking playwright-report directory:"
+          ls -la playwright-report/ || echo "playwright-report directory not found"
+          echo ""
+          echo "📄 Checking if index.html exists:"
+          if [ -f "playwright-report/index.html" ]; then
+            echo "✅ index.html found"
+            head -5 playwright-report/index.html
+          else
+            echo "❌ index.html not found"
+          fi
+
       - name: Create Consolidated HTML Report
         run: |
           mkdir -p consolidated-html-report
@@ -86,7 +99,14 @@ jobs:
           EOF
 
           # Copy the Playwright report as consolidated
-          cp -r playwright-report/* consolidated-html-report/consolidated/ 2>/dev/null || mkdir -p consolidated-html-report/consolidated
+          mkdir -p consolidated-html-report/consolidated
+          if [ -d "playwright-report" ] && [ "$(ls -A playwright-report)" ]; then
+            cp -r playwright-report/* consolidated-html-report/consolidated/
+            echo "✅ Playwright report copied to consolidated/"
+          else
+            echo "⚠️ No Playwright report found, creating placeholder"
+            echo "<h1>No consolidated report available</h1>" > consolidated-html-report/consolidated/index.html
+          fi
 
           echo "📁 Consolidated HTML report created"
           ls -la consolidated-html-report/
