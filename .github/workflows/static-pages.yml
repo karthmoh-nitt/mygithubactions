@@ -1,0 +1,65 @@
+name: Deploy Static HTML Reports
+
+on:
+  workflow_run:
+    workflows: ["Playwright Tests with Enhanced HTML Reports"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Consolidated HTML Report
+        uses: actions/download-artifact@v4
+        with:
+          name: consolidated-html-report
+          path: consolidated-html-report/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Debug - Check Artifact Contents
+        run: |
+          echo "📁 Contents of consolidated-html-report:"
+          ls -la consolidated-html-report/
+          echo ""
+          echo "📄 HTML file contents:"
+          if [ -f "consolidated-html-report/index.html" ]; then
+            head -20 consolidated-html-report/index.html
+          else
+            echo "❌ index.html not found!"
+            echo "📁 Available files:"
+            find consolidated-html-report/ -type f
+          fi
+
+      - name: Create Static Pages Directory
+        run: |
+          mkdir -p docs
+          cp -r consolidated-html-report/* docs/
+          echo "📁 Static files created in docs/ directory"
+          ls -la docs/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Static Files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3
+
+      - name: Show Deployment URL
+        run: |
+          echo "✅ GitHub Pages deployed successfully!"
+          echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
+          echo "📊 HTML Reports are now available at: https://karthmoh-nitt.github.io/mygithubactions/"

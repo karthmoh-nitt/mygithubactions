@@ -458,13 +458,20 @@ jobs:
           find consolidated-html-report/ -type f
         fi
     
+    - name: Create Static Pages Directory
+      run: |
+        mkdir -p docs
+        cp -r consolidated-html-report/* docs/
+        echo "📁 Static files created in docs/ directory"
+        ls -la docs/
+    
     - name: Setup Pages
       uses: actions/configure-pages@v4
     
-    - name: Upload artifact
+    - name: Upload Static Files
       uses: actions/upload-pages-artifact@v3
       with:
-        path: consolidated-html-report/
+        path: docs/
     
     - name: Deploy to GitHub Pages
       id: deployment
